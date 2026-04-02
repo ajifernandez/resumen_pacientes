@@ -266,6 +266,7 @@
             <button class="tab" onclick="showTab('stats')">Estadísticas</button>
             <button class="tab" onclick="showTab('history')">Historial</button>
             <button class="tab" onclick="showTab('data')">Datos</button>
+            <button class="tab" onclick="showTab('config')">Configuración</button>
         </div>
 
         <!-- Daily Entry -->
@@ -312,8 +313,8 @@
                         <canvas id="barChart"></canvas>
                     </div>
                 </div>
-                <div style="margin-top: 20px;">
-                    <canvas id="lineChart" height="100"></canvas>
+                <div style="margin-top: 20px; height: 280px;">
+                    <canvas id="lineChart"></canvas>
                 </div>
                 <div style="margin-top: 30px; height: 300px;">
                     <canvas id="annualChart"></canvas>
@@ -366,6 +367,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Configuration -->
+        <div id="config-tab" style="display:none;">
+            <div class="card">
+                <h2>Configuración de Precios por Categoría</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Define el precio por paciente para cada categoría. Estos precios se usarán para calcular ingresos估算.
+                </p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th style="width: 150px;">Precio (€)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="configTableBody">
+                    </tbody>
+                </table>
+                <button class="btn btn-success" style="margin-top: 15px;" onclick="savePrices()">💾 Guardar Precios</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -394,6 +416,7 @@
             document.getElementById('stats-tab').style.display = tab === 'stats' ? 'block' : 'none';
             document.getElementById('history-tab').style.display = tab === 'history' ? 'block' : 'none';
             document.getElementById('data-tab').style.display = tab === 'data' ? 'block' : 'none';
+            document.getElementById('config-tab').style.display = tab === 'config' ? 'block' : 'none';
             
             if (tab === 'stats') {
                 updateMonthSelects();
@@ -403,6 +426,8 @@
                 updateHistory();
             } else if (tab === 'data') {
                 updateTotalRecords();
+            } else if (tab === 'config') {
+                loadPrices();
             } else if (tab === 'daily') {
                 loadDayData();
             }
@@ -517,9 +542,16 @@
             let month = monthSelect ? monthSelect.value : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
             
             const { entries, data } = getMonthData(month);
+            const prices = getPrices();
             
             const total = Object.values(data).reduce((a, b) => a + b, 0);
             const days = new Set(entries.map(e => e.date)).size;
+            
+            let totalIncome = 0;
+            Object.entries(data).forEach(([cat, count]) => {
+                const price = prices[cat] || 0;
+                totalIncome += count * price;
+            });
             
             let statsHtml = `
                 <div class="stat-card">
@@ -535,6 +567,15 @@
                     <div class="label">Promedio/Día</div>
                 </div>
             `;
+            
+            if (totalIncome > 0) {
+                statsHtml += `
+                    <div class="stat-card">
+                        <div class="number">${totalIncome.toFixed(2)}€</div>
+                        <div class="label">Ingresos del Mes</div>
+                    </div>
+                `;
+            }
             
             const topCategory = Object.entries(data).sort((a, b) => b[1] - a[1])[0];
             if (topCategory[1] > 0) {
@@ -556,7 +597,10 @@
             const end = new Date(parts[0], parseInt(parts[1]) - 1, 1);
             const labels = [];
             const categoryData = {};
+            const monthTotals = [];
             CATEGORIES.forEach(cat => categoryData[cat] = []);
+
+            const prices = getPrices();
 
             for (let i = 11; i >= 0; i--) {
                 const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
@@ -566,10 +610,14 @@
                 labels.push(label);
 
                 const monthEntries = getEntries().filter(e => e.date.startsWith(monthStr));
+                let monthTotal = 0;
                 CATEGORIES.forEach(cat => {
                     const catTotal = monthEntries.filter(e => e.category === cat).reduce((sum, e) => sum + e.count, 0);
                     categoryData[cat].push(catTotal);
+                    const price = prices[cat] || 0;
+                    monthTotal += catTotal * price;
                 });
+                monthTotals.push(monthTotal);
             }
 
             const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'];
@@ -584,42 +632,58 @@
             const ctx = document.getElementById('annualChart').getContext('2d');
             if (annualChart) annualChart.destroy();
 
-            annualChart = new Chart(ctx, {
+                annualChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
-                    datasets: datasets
+                    datasets: [...datasets, {
+                        type: 'line',
+                        label: 'Ingresos (€)',
+                        data: monthTotals,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        order: -1,
+                        yAxisID: 'y1'
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        title: { display: true, text: 'Resumen Anual por Categoría (Últimos 12 meses)' },
+                        title: { display: true, text: 'Resumen Anual - Pacientes e Ingresos (Últimos 12 meses)' },
                         tooltip: {
                             filter: function(tooltipItem) {
                                 return tooltipItem.datasetIndex === 0;
                             },
                             callbacks: {
                                 title: function(tooltipItems) {
-                                    return tooltipItems[0].label;
+                                    if (!tooltipItems || tooltipItems.length === 0) return '';
+                                    return tooltipItems[0].label || '';
                                 },
                                 label: function() {
                                     return '';
                                 },
                                 afterBody: function(tooltipItems) {
+                                    if (!tooltipItems || tooltipItems.length === 0) return [];
                                     const monthIndex = tooltipItems[0].dataIndex;
                                     const lines = [];
                                     CATEGORIES.forEach((cat, i) => {
                                         const val = categoryData[cat][monthIndex];
+                                        const price = prices[cat] || 0;
                                         if (val > 0) {
-                                            lines.push(`${cat}: ${val}`);
+                                            lines.push(`${cat}: ${val}${price > 0 ? ` (${(val * price).toFixed(2)}€)` : ''}`);
                                         }
                                     });
                                     let total = 0;
                                     CATEGORIES.forEach(cat => {
                                         total += categoryData[cat][monthIndex];
                                     });
-                                    lines.push(`Total: ${total}`);
+                                    lines.push(`Total: ${total} pacientes`);
+                                    if (monthTotals[monthIndex] > 0) {
+                                        lines.push(`Ingresos: ${monthTotals[monthIndex].toFixed(2)}€`);
+                                    }
                                     return lines;
                                 }
                             }
@@ -629,7 +693,16 @@
                         x: { stacked: true },
                         y: { 
                             beginAtZero: true,
-                            stacked: true
+                            stacked: true,
+                            title: { display: true, text: 'Pacientes' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            title: { display: true, text: 'Ingresos (€)' },
+                            grid: { drawOnChartArea: false }
                         }
                     }
                 }
@@ -638,6 +711,7 @@
 
         function updateCharts(month, data, entries) {
             const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'];
+            const prices = getPrices();
             
             if (pieChart) pieChart.destroy();
             if (barChart) barChart.destroy();
@@ -663,24 +737,55 @@
             });
 
             const barCtx = document.getElementById('barChart').getContext('2d');
+            const categoryIncome = CATEGORIES.map(cat => (data[cat] || 0) * (prices[cat] || 0));
             barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(data),
+                    labels: CATEGORIES,
                     datasets: [{
                         label: 'Pacientes',
-                        data: Object.values(data),
+                        data: CATEGORIES.map(cat => data[cat] || 0),
                         backgroundColor: colors
+                    }, {
+                        type: 'line',
+                        label: 'Ingresos (€)',
+                        data: categoryIncome,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y1'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        title: { display: true, text: 'Pacientes por Categoría' }
+                        title: { display: true, text: 'Pacientes por Categoría' },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(tooltipItems) {
+                                    const cat = tooltipItems[0].label;
+                                    const count = data[cat] || 0;
+                                    const price = prices[cat] || 0;
+                                    if (price > 0) {
+                                        return `Ingresos: ${(count * price).toFixed(2)}€`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: { beginAtZero: true, title: { display: true, text: 'Pacientes' } },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            beginAtZero: true,
+                            title: { display: true, text: 'Ingresos (€)' },
+                            grid: { drawOnChartArea: false }
+                        }
                     }
                 }
             });
@@ -712,7 +817,15 @@
                         title: { display: true, text: 'Pacientes por Día del Mes' }
                     },
                     scales: {
-                        y: { beginAtZero: true }
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 30,
+                            ticks: {
+                                stepSize: 5
+                            },
+                            title: { display: true, text: 'Pacientes' }
+                        }
                     }
                 }
             });
@@ -851,6 +964,37 @@
                     alert('Todos los datos han sido eliminados.');
                 }
             }
+        }
+
+        function getPrices() {
+            return JSON.parse(localStorage.getItem('clinicPrices') || '{}');
+        }
+
+        function savePricesToStorage(prices) {
+            localStorage.setItem('clinicPrices', JSON.stringify(prices));
+        }
+
+        function loadPrices() {
+            const prices = getPrices();
+            const tbody = document.getElementById('configTableBody');
+            tbody.innerHTML = CATEGORIES.map(cat => `
+                <tr class="category-row">
+                    <td>${cat}</td>
+                    <td><input type="number" id="price_${cat}" min="0" step="0.01" value="${prices[cat] || ''}" placeholder="0.00"></td>
+                </tr>
+            `).join('');
+        }
+
+        function savePrices() {
+            const prices = {};
+            CATEGORIES.forEach(cat => {
+                const value = parseFloat(document.getElementById(`price_${cat}`).value);
+                if (!isNaN(value) && value > 0) {
+                    prices[cat] = value;
+                }
+            });
+            savePricesToStorage(prices);
+            alert('Precios guardados correctamente');
         }
     </script>
 </body>
