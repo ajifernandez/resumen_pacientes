@@ -4,119 +4,854 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Pacientes - Clínica</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        input[type="date"], input[type="month"], input[type="number"] {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        input[type="number"] {
+            width: 100px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #219a52;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .stat-card .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .chart-wrapper {
+            height: 280px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .category-row td:first-child {
+            font-weight: 500;
+        }
+        
+        .category-row input {
+            width: 100%;
+        }
+        
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .month-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .month-selector select, .month-selector input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .export-btn {
+            background: #27ae60;
+            margin-left: auto;
+        }
+        
+        .export-btn:hover {
+            background: #219a52;
+        }
+        
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .day-total {
+            text-align: right;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .day-total span {
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            .input-group {
+                flex-direction: column;
+            }
+            .month-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .tabs {
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>🏥 Control de Pacientes</h1>
-    <div class="tabs">
-        <button class="tablinks" onclick="openTab(event, 'EntradaDiaria')">Entrada Diaria</button>
-        <button class="tablinks" onclick="openTab(event, 'Estadisticas')">Estadísticas</button>
-        <button class="tablinks" onclick="openTab(event, 'Historial')">Historial</button>
-        <button class="tablinks" onclick="openTab(event, 'Datos')">Datos</button>
-    </div>
-    <div id="EntradaDiaria" class="tabcontent">
-        <h3>Entrada Diaria</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Categoría</th>
-                    <th>Cantidad</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Adeslas</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Asisa</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>AXA</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Caser</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>DKV</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>DKV Revisión</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Mapfre</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Privado</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Privado Efectivo</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Sanitas</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-                <tr>
-                    <td>Other</td>
-                    <td><input type="number"></td>
-                    <td><button onclick="deleteEntry(this)">Eliminar</button></td>
-                </tr>
-            </tbody>
-        </table>
-        <button onclick="submitDailyEntry()">Enviar</button>
-    </div>
-    <div id="Estadisticas" class="tabcontent">
-        <h3>Estadísticas</h3>
-        <div id="monthlyStats">
-            <div class="statCard">
-                <h4>Mensual</h4>
-                <p id="monthlyTotal">0</p>
+    <div class="container">
+        <h1>🏥 Control de Pacientes</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('daily')">Entrada Diaria</button>
+            <button class="tab" onclick="showTab('stats')">Estadísticas</button>
+            <button class="tab" onclick="showTab('history')">Historial</button>
+            <button class="tab" onclick="showTab('data')">Datos</button>
+        </div>
+
+        <!-- Daily Entry -->
+        <div id="daily-tab">
+            <div class="card">
+                <h2>Registrar Pacientes del Día</h2>
+                <div class="input-group">
+                    <input type="date" id="entryDate" onchange="loadDayData()">
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th style="width: 120px;">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyTableBody">
+                    </tbody>
+                </table>
+                <div class="day-total" style="margin-top: 15px;">
+                    Total del día: <span id="dayTotal">0</span>
+                </div>
+                <button class="btn btn-success" style="margin-top: 15px;" onclick="saveDay()">Guardar Día</button>
             </div>
-            <canvas id="monthlyChart"></canvas>
+        </div>
+
+        <!-- Statistics -->
+        <div id="stats-tab" style="display:none;">
+            <div class="card">
+                <div class="month-header">
+                    <h2>Estadísticas Mensuales</h2>
+                    <div class="month-selector">
+                        <select id="statsMonthSelect" onchange="updateStats()">
+                        </select>
+                        <button class="btn export-btn" onclick="exportToExcel()">📊 Exportar</button>
+                    </div>
+                </div>
+                <div class="stats-grid" id="statsCards"></div>
+                <div class="charts-container" style="margin-top: 20px;">
+                    <div class="chart-wrapper">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <canvas id="lineChart" height="100"></canvas>
+                </div>
+                <div style="margin-top: 30px; height: 300px;">
+                    <canvas id="annualChart"></canvas>
+                </div>
+                <div style="margin-top: 10px; text-align: right;">
+                    <button class="btn export-btn" style="background: #764ba2;" onclick="exportAnnualToExcel()">📊 Exportar Informe Anual</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div id="history-tab" style="display:none;">
+            <div class="card">
+                <h2>Historial de Registros</h2>
+                <div class="month-selector">
+                    <select id="historyMonthSelect" onchange="updateHistory()">
+                    </select>
+                </div>
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Categoría</th>
+                            <th>Cantidad</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Data Management -->
+        <div id="data-tab" style="display:none;">
+            <div class="card">
+                <h2>Gestión de Datos</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Exporta tus datos para hacer backup o импортalos desde otro navegador/dispositivo.
+                </p>
+                <div class="input-group">
+                    <button class="btn" onclick="exportToJSON()">📤 Exportar Datos (JSON)</button>
+                    <button class="btn" onclick="document.getElementById('importFile').click()">📥 Importar Datos (JSON)</button>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importFromJSON(event)">
+                </div>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Borrar Todos los Datos</button>
+                </div>
+                <div class="day-total" style="margin-top: 20px;">
+                    Registros actuales: <span id="totalRecords">0</span>
+                </div>
+            </div>
         </div>
     </div>
-    <div id="Historial" class="tabcontent">
-        <h3>Historial</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Categoría</th>
-                    <th>Cantidad</th>
-                    <th>Acción</th>
+
+    <script>
+        const CATEGORIES = ['Adeslas', 'Asisa', 'AXA', 'Caser', 'DKV', 'DKV Revision', 'Mapfre', 'Privado', 'Privado Efectivo', 'Sanitas', 'Other'];
+        let pieChart, barChart, lineChart, annualChart;
+
+        document.getElementById('entryDate').valueAsDate = new Date();
+        
+        initDailyTable();
+
+        function initDailyTable() {
+            const tbody = document.getElementById('dailyTableBody');
+            tbody.innerHTML = CATEGORIES.map(cat => `
+                <tr class="category-row">
+                    <td>${cat}</td>
+                    <td><input type="number" id="day_${cat}" min="0" value="0" oninput="updateDayTotal()"></td>
                 </tr>
-            </thead>
-            <tbody id="historyTable">
-                <!-- Historial entries go here -->
-            </tbody>
-        </table>
-    </div>
-    <div id="Datos" class="tabcontent">
-        <h3>Datos</h3>
-        <button onclick="exportToJSON()">Exportar a JSON</button>
-        <button onclick="importFromJSON()">Importar desde JSON</button>
-        <button onclick="clearAllData()">Limpiar Todos los Datos</button>
-    </div>
-    <script src="app.js"></script>
+            `).join('');
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('daily-tab').style.display = tab === 'daily' ? 'block' : 'none';
+            document.getElementById('stats-tab').style.display = tab === 'stats' ? 'block' : 'none';
+            document.getElementById('history-tab').style.display = tab === 'history' ? 'block' : 'none';
+            document.getElementById('data-tab').style.display = tab === 'data' ? 'block' : 'none';
+            
+            if (tab === 'stats') {
+                updateMonthSelects();
+                updateStats();
+            } else if (tab === 'history') {
+                updateMonthSelects();
+                updateHistory();
+            } else if (tab === 'data') {
+                updateTotalRecords();
+            } else if (tab === 'daily') {
+                loadDayData();
+            }
+        }
+
+        function getEntries() {
+            return JSON.parse(localStorage.getItem('clinicEntries') || '[]');
+        }
+
+        function saveEntries(entries) {
+            localStorage.setItem('clinicEntries', JSON.stringify(entries));
+        }
+
+        function updateDayTotal() {
+            let total = 0;
+            CATEGORIES.forEach(cat => {
+                total += parseInt(document.getElementById(`day_${cat}`).value) || 0;
+            });
+            document.getElementById('dayTotal').textContent = total;
+        }
+
+        function loadDayData() {
+            const date = document.getElementById('entryDate').value;
+            CATEGORIES.forEach(cat => {
+                document.getElementById(`day_${cat}`).value = 0;
+            });
+            
+            if (date) {
+                const entries = getEntries().filter(e => e.date === date);
+                entries.forEach(e => {
+                    const input = document.getElementById(`day_${e.category}`);
+                    if (input) input.value = e.count;
+                });
+            }
+            updateDayTotal();
+        }
+
+        function saveDay() {
+            const date = document.getElementById('entryDate').value;
+            if (!date) {
+                alert('Selecciona una fecha');
+                return;
+            }
+
+            const entries = getEntries().filter(e => e.date !== date);
+            let saved = 0;
+            
+            CATEGORIES.forEach(cat => {
+                const count = parseInt(document.getElementById(`day_${cat}`).value) || 0;
+                if (count > 0) {
+                    entries.push({
+                        id: Date.now() + Math.random(),
+                        date,
+                        category: cat,
+                        count
+                    });
+                    saved++;
+                }
+            });
+
+            if (saved === 0) {
+                alert('No hay pacientes para guardar');
+                return;
+            }
+
+            saveEntries(entries);
+            alert(`Guardado: ${saved} categorías`);
+        }
+
+        function deleteEntry(id) {
+            if (confirm('¿Eliminar este registro?')) {
+                const entries = getEntries().filter(e => e.id !== id);
+                saveEntries(entries);
+                updateHistory();
+                updateStats();
+            }
+        }
+
+        function updateMonthSelects() {
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            let html = '';
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                html += `<option value="${value}">${label}</option>`;
+            }
+            document.getElementById('statsMonthSelect').innerHTML = html;
+            document.getElementById('historyMonthSelect').innerHTML = html;
+            
+            document.getElementById('statsMonthSelect').value = currentMonth;
+            document.getElementById('historyMonthSelect').value = currentMonth;
+        }
+
+        function getMonthData(month) {
+            const entries = getEntries().filter(e => e.date.startsWith(month));
+            const data = {};
+            CATEGORIES.forEach(cat => data[cat] = 0);
+            entries.forEach(e => {
+                if (data[e.category] !== undefined) {
+                    data[e.category] += e.count;
+                } else {
+                    data['Other'] = (data['Other'] || 0) + e.count;
+                }
+            });
+            return { entries, data };
+        }
+
+        function updateStats() {
+            const monthSelect = document.getElementById('statsMonthSelect');
+            let month = monthSelect ? monthSelect.value : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+            
+            const { entries, data } = getMonthData(month);
+            
+            const total = Object.values(data).reduce((a, b) => a + b, 0);
+            const days = new Set(entries.map(e => e.date)).size;
+            
+            let statsHtml = `
+                <div class="stat-card">
+                    <div class="number">${total}</div>
+                    <div class="label">Total Pacientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">${days}</div>
+                    <div class="label">Días Laborados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">${days ? Math.round(total / days) : 0}</div>
+                    <div class="label">Promedio/Día</div>
+                </div>
+            `;
+            
+            const topCategory = Object.entries(data).sort((a, b) => b[1] - a[1])[0];
+            if (topCategory[1] > 0) {
+                statsHtml += `
+                    <div class="stat-card">
+                        <div class="number" style="font-size: 1.2rem;">${topCategory[0]}</div>
+                        <div class="label">Top Categoría (${topCategory[1]})</div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('statsCards').innerHTML = statsHtml;
+            updateCharts(month, data, entries);
+            updateAnnualChart(month);
+        }
+
+        function updateAnnualChart(endMonth) {
+            const parts = endMonth.split('-');
+            const end = new Date(parts[0], parseInt(parts[1]) - 1, 1);
+            const labels = [];
+            const categoryData = {};
+            CATEGORIES.forEach(cat => categoryData[cat] = []);
+
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
+                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                
+                const label = d.toLocaleDateString('es-ES', { month: 'short' });
+                labels.push(label);
+
+                const monthEntries = getEntries().filter(e => e.date.startsWith(monthStr));
+                CATEGORIES.forEach(cat => {
+                    const catTotal = monthEntries.filter(e => e.category === cat).reduce((sum, e) => sum + e.count, 0);
+                    categoryData[cat].push(catTotal);
+                });
+            }
+
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'];
+            
+            const datasets = CATEGORIES.map((cat, i) => ({
+                label: cat,
+                data: categoryData[cat],
+                backgroundColor: colors[i % colors.length],
+                stack: 'stack0'
+            }));
+
+            const ctx = document.getElementById('annualChart').getContext('2d');
+            if (annualChart) annualChart.destroy();
+
+            annualChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Resumen Anual por Categoría (Últimos 12 meses)' },
+                        tooltip: {
+                            filter: function(tooltipItem) {
+                                return tooltipItem.datasetIndex === 0;
+                            },
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    return tooltipItems[0].label;
+                                },
+                                label: function() {
+                                    return '';
+                                },
+                                afterBody: function(tooltipItems) {
+                                    const monthIndex = tooltipItems[0].dataIndex;
+                                    const lines = [];
+                                    CATEGORIES.forEach((cat, i) => {
+                                        const val = categoryData[cat][monthIndex];
+                                        if (val > 0) {
+                                            lines.push(`${cat}: ${val}`);
+                                        }
+                                    });
+                                    let total = 0;
+                                    CATEGORIES.forEach(cat => {
+                                        total += categoryData[cat][monthIndex];
+                                    });
+                                    lines.push(`Total: ${total}`);
+                                    return lines;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { 
+                            beginAtZero: true,
+                            stacked: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateCharts(month, data, entries) {
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'];
+            
+            if (pieChart) pieChart.destroy();
+            if (barChart) barChart.destroy();
+            if (lineChart) lineChart.destroy();
+
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data).filter(k => data[k] > 0),
+                    datasets: [{
+                        data: Object.values(data).filter(v => v > 0),
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Distribución por Categoría' }
+                    }
+                }
+            });
+
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Pacientes',
+                        data: Object.values(data),
+                        backgroundColor: colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Pacientes por Categoría' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            const dailyData = {};
+            entries.forEach(e => {
+                const day = e.date.slice(-2);
+                dailyData[day] = (dailyData[day] || 0) + e.count;
+            });
+
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            lineChart = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(dailyData).sort((a, b) => parseInt(a) - parseInt(b)),
+                    datasets: [{
+                        label: 'Pacientes por Día',
+                        data: Object.keys(dailyData).sort((a, b) => parseInt(a) - parseInt(b)).map(d => dailyData[d]),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Pacientes por Día del Mes' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function updateHistory() {
+            const month = document.getElementById('historyMonthSelect').value;
+            const { entries } = getMonthData(month);
+            
+            const tbody = document.querySelector('#historyTable tbody');
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No hay registros para este mes</td></tr>';
+                return;
+            }
+            
+            entries.sort((a, b) => b.date.localeCompare(a.date));
+            tbody.innerHTML = entries.map(e => `
+                <tr>
+                    <td>${new Date(e.date).toLocaleDateString('es-ES')}</td>
+                    <td>${e.category}</td>
+                    <td>${e.count}</td>
+                    <td><button class="delete-btn" onclick="deleteEntry(${e.id})">Eliminar</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function exportToExcel() {
+            const month = document.getElementById('statsMonthSelect').value;
+            const { entries, data } = getMonthData(month);
+            
+            let csv = 'Fecha,Categoría,Cantidad\n';
+            entries.sort((a, b) => a.date.localeCompare(b.date));
+            entries.forEach(e => {
+                csv += `${e.date},${e.category},${e.count}\n`;
+            });
+            
+            csv += '\nResumen por Categoría\n';
+            csv += 'Categoría,Total\n';
+            Object.entries(data).forEach(([cat, count]) => {
+                csv += `${cat},${count}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `resumen_${month}.csv`;
+            link.click();
+        }
+
+        function exportAnnualToExcel() {
+            const endMonth = document.getElementById('statsMonthSelect').value;
+            const parts = endMonth.split('-');
+            const end = new Date(parts[0], parseInt(parts[1]) - 1, 1);
+            let csv = 'Mes,' + CATEGORIES.join(',') + ',Total\n';
+
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
+                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('es-ES', { month: 'long' });
+
+                const monthEntries = getEntries().filter(e => e.date.startsWith(monthStr));
+                let rowTotal = 0;
+                let rowValues = CATEGORIES.map(cat => {
+                    const catTotal = monthEntries.filter(e => e.category === cat).reduce((sum, e) => sum + e.count, 0);
+                    rowTotal += catTotal;
+                    return catTotal;
+                });
+                csv += `${label},${rowValues.join(',')},${rowTotal}\n`;
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `resumen_anual_${endMonth}.csv`;
+            link.click();
+        }
+
+        function exportToJSON() {
+            const entries = getEntries().map(e => ({
+                date: e.date,
+                category: e.category,
+                count: e.count
+            }));
+            const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `clinic_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            document.getElementById('totalRecords').textContent = entries.length;
+        }
+
+        function importFromJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const entries = JSON.parse(e.target.result);
+                    if (!Array.isArray(entries)) {
+                        alert('Formato de archivo inválido');
+                        return;
+                    }
+                    
+                    const entriesWithIds = entries.map(e => ({
+                        id: Date.now() + Math.random(),
+                        date: e.date,
+                        category: e.category,
+                        count: e.count
+                    }));
+                    
+                    const currentEntries = getEntries();
+                    const merged = [...currentEntries, ...entriesWithIds];
+                    saveEntries(merged);
+                    
+                    alert(`Importados ${entries.length} registros. Total: ${merged.length}`);
+                    document.getElementById('totalRecords').textContent = merged.length;
+                } catch (err) {
+                    alert('Error al leer el archivo: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function updateTotalRecords() {
+            const entries = getEntries();
+            document.getElementById('totalRecords').textContent = entries.length;
+        }
+
+        function clearAllData() {
+            if (confirm('⚠️ ¿Estás seguro de BORRAR TODOS los datos? Esta acción no se puede deshacer.')) {
+                if (confirm('¿Confirmas definitivamente eliminar todos los registros?')) {
+                    localStorage.removeItem('clinicEntries');
+                    updateTotalRecords();
+                    alert('Todos los datos han sido eliminados.');
+                }
+            }
+        }
+    </script>
 </body>
 </html>
