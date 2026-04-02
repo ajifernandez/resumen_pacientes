@@ -6,31 +6,32 @@
     <title>Control de Pacientes - Clínica</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
+        *, *::before, *::after {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-        
+
         h1 {
             color: white;
             text-align: center;
             margin-bottom: 20px;
             font-size: 2rem;
         }
-        
+
+        /* Cards */
         .card {
             background: white;
             border-radius: 15px;
@@ -38,185 +39,169 @@
             margin-bottom: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        
+
         .card h2 {
             color: #333;
             margin-bottom: 15px;
             font-size: 1.3rem;
         }
-        
+
+        /* Inputs */
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 15px;
             flex-wrap: wrap;
+            align-items: center;
         }
-        
-        input[type="date"], input[type="month"], input[type="number"] {
-            padding: 12px;
+
+        input[type="date"],
+        input[type="number"],
+        select {
+            padding: 10px 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
             font-size: 1rem;
+            transition: border-color 0.2s;
         }
-        
+
+        input[type="date"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         input[type="number"] {
             width: 100px;
         }
-        
+
+        /* Buttons */
         .btn {
-            padding: 12px 25px;
+            padding: 10px 20px;
             background: #667eea;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
-            transition: all 0.3s;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
         }
-        
-        .btn:hover {
-            background: #5568d3;
-        }
-        
-        .btn-success {
-            background: #27ae60;
-        }
-        
-        .btn-success:hover {
-            background: #219a52;
-        }
-        
-        .btn-danger {
-            background: #e74c3c;
-        }
-        
-        .btn-danger:hover {
-            background: #c0392b;
-        }
-        
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .stat-card .number {
-            font-size: 2rem;
-            font-weight: bold;
-        }
-        
-        .stat-card .label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        .charts-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 20px;
-        }
-        
-        .chart-wrapper {
-            height: 280px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        th {
-            background: #667eea;
-            color: white;
-        }
-        
-        tr:hover {
-            background: #f5f5f5;
-        }
-        
-        .category-row td:first-child {
-            font-weight: 500;
-        }
-        
-        .category-row input {
-            width: 100%;
-        }
-        
-        .delete-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
+
+        .btn:hover  { background: #5568d3; }
+        .btn:active { transform: scale(0.98); }
+
+        .btn-success        { background: #27ae60; }
+        .btn-success:hover  { background: #219a52; }
+
+        .btn-danger         { background: #e74c3c; }
+        .btn-danger:hover   { background: #c0392b; }
+
+        .btn-warning        { background: #f39c12; }
+        .btn-warning:hover  { background: #d68910; }
+
+        .btn-purple         { background: #764ba2; }
+        .btn-purple:hover   { background: #6a4292; }
+
+        .btn-sm {
             padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
         }
-        
-        .month-selector {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .month-selector select, .month-selector input {
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        
+
+        /* Tabs */
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
-        
+
         .tab {
-            padding: 12px 20px;
+            padding: 10px 18px;
             background: rgba(255,255,255,0.2);
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
-            transition: all 0.3s;
+            transition: background 0.2s;
         }
-        
-        .tab:hover {
-            background: rgba(255,255,255,0.3);
+
+        .tab:hover  { background: rgba(255,255,255,0.35); }
+        .tab.active { background: white; color: #667eea; font-weight: 600; }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
-        
-        .tab.active {
-            background: white;
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            line-height: 1.2;
+        }
+
+        .stat-card .label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-wrapper { height: 280px; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        tbody tr:hover { background: #f8f9ff; }
+
+        .category-row td:first-child { font-weight: 500; }
+        .category-row input { width: 100%; }
+
+        /* History day group */
+        .day-group-header td {
+            background: #f0f2ff;
             color: #667eea;
+            font-weight: 700;
+            border-top: 2px solid #c5caff;
         }
-        
-        .export-btn {
-            background: #27ae60;
-            margin-left: auto;
-        }
-        
-        .export-btn:hover {
-            background: #219a52;
-        }
-        
+
+        /* Month header */
         .month-header {
             display: flex;
             justify-content: space-between;
@@ -225,51 +210,156 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        
+
+        .month-selector {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Day total */
         .day-total {
-            text-align: right;
-            padding: 15px;
-            background: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #f0f2ff;
             border-radius: 8px;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 600;
             color: #333;
+            margin-top: 12px;
         }
-        
-        .day-total span {
+
+        .day-total .total-value {
+            font-size: 1.5rem;
             color: #667eea;
         }
 
+        /* Info box */
+        .info-box {
+            background: #f0f2ff;
+            border-left: 4px solid #667eea;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: #555;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        /* Data sections */
+        .data-section {
+            padding: 20px 0;
+            border-top: 1px solid #eee;
+        }
+
+        .data-section:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .data-section h3 {
+            color: #444;
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+
+        /* Radio group */
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #444;
+        }
+
+        .radio-option input[type="radio"] {
+            width: auto;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        /* Inline feedback messages */
+        .save-msg {
+            color: #27ae60;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        /* History summary pills */
+        .summary-pills {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .pill {
+            background: #f0f2ff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.95rem;
+            font-weight: 500;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            max-width: 340px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+        }
+
+        #toast.show       { opacity: 1; transform: translateY(0); }
+        #toast.success    { background: #27ae60; }
+        #toast.error      { background: #e74c3c; }
+        #toast.info       { background: #667eea; }
+        #toast.warning    { background: #f39c12; }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .charts-container {
-                grid-template-columns: 1fr;
-            }
-            .input-group {
-                flex-direction: column;
-            }
-            .month-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .tabs {
-                justify-content: center;
-            }
+            .charts-container  { grid-template-columns: 1fr; }
+            .month-header      { flex-direction: column; align-items: flex-start; }
+            .tabs              { justify-content: center; }
+            h1                 { font-size: 1.5rem; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏥 Control de Pacientes</h1>
-        
+
         <div class="tabs">
-            <button class="tab active" onclick="showTab('daily')">Entrada Diaria</button>
-            <button class="tab" onclick="showTab('stats')">Estadísticas</button>
-            <button class="tab" onclick="showTab('history')">Historial</button>
-            <button class="tab" onclick="showTab('data')">Datos</button>
-            <button class="tab" onclick="showTab('config')">Configuración</button>
+            <button class="tab active"  onclick="showTab('daily',  this)">📅 Entrada Diaria</button>
+            <button class="tab"         onclick="showTab('stats',  this)">📊 Estadísticas</button>
+            <button class="tab"         onclick="showTab('history',this)">📋 Historial</button>
+            <button class="tab"         onclick="showTab('data',   this)">💾 Datos</button>
+            <button class="tab"         onclick="showTab('config', this)">⚙️ Configuración</button>
         </div>
 
-        <!-- Daily Entry -->
+        <!-- ── Daily Entry ──────────────────────────────────────────────── -->
         <div id="daily-tab">
             <div class="card">
                 <h2>Registrar Pacientes del Día</h2>
@@ -280,66 +370,64 @@
                     <thead>
                         <tr>
                             <th>Categoría</th>
-                            <th style="width: 120px;">Cantidad</th>
+                            <th style="width:130px;">Pacientes</th>
                         </tr>
                     </thead>
-                    <tbody id="dailyTableBody">
-                    </tbody>
+                    <tbody id="dailyTableBody"></tbody>
                 </table>
-                <div class="day-total" style="margin-top: 15px;">
-                    Total del día: <span id="dayTotal">0</span>
+                <div class="day-total">
+                    <span>Total del día</span>
+                    <span class="total-value" id="dayTotal">0</span>
                 </div>
-                <button class="btn btn-success" style="margin-top: 15px;" onclick="saveDay()">Guardar Día</button>
+                <div style="margin-top:15px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-success" onclick="saveDay()">💾 Guardar Día</button>
+                    <span id="saveMsg" class="save-msg" style="display:none;"></span>
+                </div>
             </div>
         </div>
 
-        <!-- Statistics -->
+        <!-- ── Statistics ───────────────────────────────────────────────── -->
         <div id="stats-tab" style="display:none;">
             <div class="card">
                 <div class="month-header">
                     <h2>Estadísticas Mensuales</h2>
                     <div class="month-selector">
-                        <select id="statsMonthSelect" onchange="updateStats()">
-                        </select>
-                        <button class="btn export-btn" onclick="exportToExcel()">📊 Exportar</button>
+                        <select id="statsMonthSelect" onchange="updateStats()"></select>
+                        <button class="btn btn-success" onclick="exportToCSV()">📊 CSV Mensual</button>
+                        <button class="btn btn-purple"  onclick="exportAnnualToCSV()">📊 CSV Anual</button>
                     </div>
                 </div>
                 <div class="stats-grid" id="statsCards"></div>
-                <div class="charts-container" style="margin-top: 20px;">
-                    <div class="chart-wrapper">
-                        <canvas id="pieChart"></canvas>
-                    </div>
-                    <div class="chart-wrapper">
-                        <canvas id="barChart"></canvas>
-                    </div>
+                <div class="charts-container">
+                    <div class="chart-wrapper"><canvas id="pieChart"></canvas></div>
+                    <div class="chart-wrapper"><canvas id="barChart"></canvas></div>
                 </div>
-                <div style="margin-top: 20px; height: 280px;">
+                <div style="margin-top:20px; height:280px;">
                     <canvas id="lineChart"></canvas>
                 </div>
-                <div style="margin-top: 30px; height: 300px;">
+                <div style="margin-top:30px; height:320px;">
                     <canvas id="annualChart"></canvas>
-                </div>
-                <div style="margin-top: 10px; text-align: right;">
-                    <button class="btn export-btn" style="background: #764ba2;" onclick="exportAnnualToExcel()">📊 Exportar Informe Anual</button>
                 </div>
             </div>
         </div>
 
-        <!-- History -->
+        <!-- ── History ───────────────────────────────────────────────────── -->
         <div id="history-tab" style="display:none;">
             <div class="card">
-                <h2>Historial de Registros</h2>
-                <div class="month-selector">
-                    <select id="historyMonthSelect" onchange="updateHistory()">
-                    </select>
+                <div class="month-header">
+                    <h2>Historial de Registros</h2>
+                    <div class="month-selector">
+                        <select id="historyMonthSelect" onchange="updateHistory()"></select>
+                    </div>
                 </div>
+                <div id="historySummary"></div>
                 <table id="historyTable">
                     <thead>
                         <tr>
                             <th>Fecha</th>
                             <th>Categoría</th>
                             <th>Cantidad</th>
-                            <th>Acción</th>
+                            <th style="width:90px;">Acción</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -347,91 +435,175 @@
             </div>
         </div>
 
-        <!-- Data Management -->
+        <!-- ── Data Management ───────────────────────────────────────────── -->
         <div id="data-tab" style="display:none;">
             <div class="card">
                 <h2>Gestión de Datos</h2>
-                <p style="margin-bottom: 20px; color: #666;">
-                    Exporta tus datos para hacer backup o импортalos desde otro navegador/dispositivo.
-                </p>
-                <div class="input-group">
-                    <button class="btn" onclick="exportToJSON()">📤 Exportar Datos (JSON)</button>
-                    <button class="btn" onclick="document.getElementById('importFile').click()">📥 Importar Datos (JSON)</button>
-                    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importFromJSON(event)">
+
+                <div class="data-section">
+                    <h3>📤 Exportar copia de seguridad</h3>
+                    <div class="info-box">
+                        Exporta <strong>todos los datos</strong> — registros y precios — en un único archivo JSON.
+                        Puedes abrirlo en cualquier ordenador o navegador con esta misma aplicación.
+                    </div>
+                    <div class="input-group">
+                        <button class="btn btn-success" onclick="exportToJSON()">📤 Exportar todo (JSON)</button>
+                    </div>
                 </div>
-                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Borrar Todos los Datos</button>
+
+                <div class="data-section">
+                    <h3>📥 Importar copia de seguridad</h3>
+                    <div class="info-box">
+                        Importa un archivo JSON exportado desde esta aplicación.
+                        Elige cómo se combinarán los datos:
+                    </div>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="importMode" value="merge" checked>
+                            <div>
+                                <strong>Combinar</strong> — añade los registros del archivo sin borrar los actuales.
+                                Los duplicados (mismo día y categoría) se omiten.
+                            </div>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="importMode" value="replace">
+                            <div>
+                                <strong>Reemplazar</strong> — borra todos los datos actuales y los sustituye por los del archivo.
+                            </div>
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <button class="btn" onclick="document.getElementById('importFile').click()">
+                            📥 Seleccionar archivo JSON
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importFromJSON(event)">
+                    </div>
                 </div>
-                <div class="day-total" style="margin-top: 20px;">
-                    Registros actuales: <span id="totalRecords">0</span>
+
+                <div class="data-section">
+                    <h3>📈 Estado actual</h3>
+                    <div class="stats-grid" id="dataStats" style="max-width:520px;"></div>
+                </div>
+
+                <div class="data-section">
+                    <h3 style="color:#e74c3c;">⚠️ Zona de peligro</h3>
+                    <p style="color:#888; margin-bottom:12px; font-size:0.9rem;">
+                        Elimina permanentemente todos los registros y la configuración de precios.
+                    </p>
+                    <button class="btn btn-danger" id="clearBtn" onclick="clearAllData()">
+                        🗑️ Borrar Todos los Datos
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Configuration -->
+        <!-- ── Configuration ─────────────────────────────────────────────── -->
         <div id="config-tab" style="display:none;">
             <div class="card">
                 <h2>Configuración de Precios por Categoría</h2>
-                <p style="margin-bottom: 20px; color: #666;">
-                    Define el precio por paciente para cada categoría. Estos precios se usarán para calcular ingresos估算.
-                </p>
+                <div class="info-box">
+                    Define el precio por paciente en cada categoría.
+                    Se usa para calcular los ingresos estimados en las estadísticas.
+                    Los precios se guardan junto con tus datos al exportar.
+                </div>
                 <table>
                     <thead>
                         <tr>
                             <th>Categoría</th>
-                            <th style="width: 150px;">Precio (€)</th>
+                            <th style="width:180px;">Precio por paciente (€)</th>
                         </tr>
                     </thead>
-                    <tbody id="configTableBody">
-                    </tbody>
+                    <tbody id="configTableBody"></tbody>
                 </table>
-                <button class="btn btn-success" style="margin-top: 15px;" onclick="savePrices()">💾 Guardar Precios</button>
+                <div style="margin-top:15px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-success" onclick="savePrices()">💾 Guardar Precios</button>
+                    <span id="pricesSaveMsg" class="save-msg" style="display:none;"></span>
+                </div>
             </div>
         </div>
     </div>
 
+    <div id="toast"></div>
+
     <script>
-        const CATEGORIES = ['Adeslas', 'Asisa', 'AXA', 'Caser', 'DKV', 'DKV Revision', 'Mapfre', 'Privado', 'Privado Efectivo', 'Sanitas', 'Other'];
+        // ── Constants ─────────────────────────────────────────────────────────
+
+        const CATEGORIES = [
+            'Adeslas', 'Asisa', 'AXA', 'Caser', 'DKV', 'DKV Revision',
+            'Mapfre', 'Privado', 'Privado Efectivo', 'Sanitas', 'Other'
+        ];
+
+        const COLORS = [
+            '#667eea','#764ba2','#f093fb','#f5576c','#4facfe',
+            '#00c2b8','#43e97b','#38f9d7','#fa709a','#fee140','#30cfd0'
+        ];
+
         let pieChart, barChart, lineChart, annualChart;
 
-        document.getElementById('entryDate').valueAsDate = new Date();
-        
-        initDailyTable();
+        // ── Utility helpers ───────────────────────────────────────────────────
 
-        function initDailyTable() {
-            const tbody = document.getElementById('dailyTableBody');
-            tbody.innerHTML = CATEGORIES.map(cat => `
-                <tr class="category-row">
-                    <td>${cat}</td>
-                    <td><input type="number" id="day_${cat}" min="0" value="0" oninput="updateDayTotal()"></td>
-                </tr>
-            `).join('');
+        /** Sanitize a category name for use as a DOM id (no spaces). */
+        function catId(cat) {
+            return cat.replace(/\s+/g, '_');
         }
 
-        function showTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            document.getElementById('daily-tab').style.display = tab === 'daily' ? 'block' : 'none';
-            document.getElementById('stats-tab').style.display = tab === 'stats' ? 'block' : 'none';
-            document.getElementById('history-tab').style.display = tab === 'history' ? 'block' : 'none';
-            document.getElementById('data-tab').style.display = tab === 'data' ? 'block' : 'none';
-            document.getElementById('config-tab').style.display = tab === 'config' ? 'block' : 'none';
-            
-            if (tab === 'stats') {
-                updateMonthSelects();
-                updateStats();
-            } else if (tab === 'history') {
-                updateMonthSelects();
-                updateHistory();
-            } else if (tab === 'data') {
-                updateTotalRecords();
-            } else if (tab === 'config') {
-                loadPrices();
-            } else if (tab === 'daily') {
-                loadDayData();
-            }
+        /**
+         * Parse a YYYY-MM-DD string as a LOCAL date.
+         * new Date("YYYY-MM-DD") parses as UTC midnight, which shifts the displayed
+         * day by ±1 in non-UTC timezones. This avoids that bug.
+         */
+        function parseLocalDate(str) {
+            const [y, m, d] = str.split('-').map(Number);
+            return new Date(y, m - 1, d);
         }
+
+        function formatDate(str) {
+            return parseLocalDate(str).toLocaleDateString('es-ES', {
+                weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+        }
+
+        function formatMonth(str) {
+            const [y, m] = str.split('-').map(Number);
+            return new Date(y, m - 1, 1).toLocaleDateString('es-ES', {
+                month: 'long', year: 'numeric'
+            });
+        }
+
+        function getCurrentMonth() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        /** Generate sequential integer IDs (stored in localStorage). */
+        function nextId() {
+            const id = parseInt(localStorage.getItem('clinicNextId') || '0') + 1;
+            localStorage.setItem('clinicNextId', String(id));
+            return id;
+        }
+
+        // ── Toast notifications ───────────────────────────────────────────────
+
+        let toastTimer;
+        function toast(msg, type = 'success', duration = 3000) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.className = `${type} show`;
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+        }
+
+        // ── Inline feedback helpers ───────────────────────────────────────────
+
+        function showInlineMsg(id, msg, duration = 5000) {
+            const el = document.getElementById(id);
+            el.textContent = msg;
+            el.style.display = 'inline';
+            clearTimeout(el._t);
+            el._t = setTimeout(() => { el.style.display = 'none'; }, duration);
+        }
+
+        // ── Storage ───────────────────────────────────────────────────────────
 
         function getEntries() {
             return JSON.parse(localStorage.getItem('clinicEntries') || '[]');
@@ -441,10 +613,88 @@
             localStorage.setItem('clinicEntries', JSON.stringify(entries));
         }
 
+        function getPrices() {
+            return JSON.parse(localStorage.getItem('clinicPrices') || '{}');
+        }
+
+        function savePricesToStorage(prices) {
+            localStorage.setItem('clinicPrices', JSON.stringify(prices));
+        }
+
+        // ── Initialisation ────────────────────────────────────────────────────
+
+        document.getElementById('entryDate').valueAsDate = new Date();
+        initDailyTable();
+        loadDayData();
+
+        function initDailyTable() {
+            document.getElementById('dailyTableBody').innerHTML = CATEGORIES.map(cat => `
+                <tr class="category-row">
+                    <td>${cat}</td>
+                    <td>
+                        <input type="number" id="day_${catId(cat)}"
+                               min="0" value="0" oninput="updateDayTotal()">
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ── Tab navigation ────────────────────────────────────────────────────
+
+        function showTab(tab, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+
+            ['daily','stats','history','data','config'].forEach(t => {
+                document.getElementById(`${t}-tab`).style.display = (t === tab) ? 'block' : 'none';
+            });
+
+            if      (tab === 'stats')   { updateMonthSelects('stats');   updateStats();   }
+            else if (tab === 'history') { updateMonthSelects('history'); updateHistory(); }
+            else if (tab === 'data')    { updateDataTab(); }
+            else if (tab === 'config')  { loadPrices(); }
+            else if (tab === 'daily')   { loadDayData(); }
+        }
+
+        // ── Month selectors ───────────────────────────────────────────────────
+
+        /**
+         * Build the month list from months that actually have data,
+         * plus the 3 most recent months regardless of data.
+         */
+        function getAvailableMonths() {
+            const months = new Set();
+            getEntries().forEach(e => months.add(e.date.substring(0, 7)));
+            const now = new Date();
+            for (let i = 0; i < 3; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+            }
+            return [...months].sort().reverse();
+        }
+
+        function updateMonthSelects(target) {
+            const months = getAvailableMonths();
+            const html = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
+            const ids = target === 'stats'   ? ['statsMonthSelect']   :
+                        target === 'history' ? ['historyMonthSelect'] :
+                        ['statsMonthSelect', 'historyMonthSelect'];
+
+            ids.forEach(id => {
+                const sel = document.getElementById(id);
+                const prev = sel.value;
+                sel.innerHTML = html;
+                // Restore previous selection when available
+                sel.value = (prev && months.includes(prev)) ? prev : (months[0] || getCurrentMonth());
+            });
+        }
+
+        // ── Daily entry ───────────────────────────────────────────────────────
+
         function updateDayTotal() {
             let total = 0;
             CATEGORIES.forEach(cat => {
-                total += parseInt(document.getElementById(`day_${cat}`).value) || 0;
+                total += parseInt(document.getElementById(`day_${catId(cat)}`).value) || 0;
             });
             document.getElementById('dayTotal').textContent = total;
         }
@@ -452,76 +702,45 @@
         function loadDayData() {
             const date = document.getElementById('entryDate').value;
             CATEGORIES.forEach(cat => {
-                document.getElementById(`day_${cat}`).value = 0;
+                document.getElementById(`day_${catId(cat)}`).value = 0;
             });
-            
+
             if (date) {
-                const entries = getEntries().filter(e => e.date === date);
-                entries.forEach(e => {
-                    const input = document.getElementById(`day_${e.category}`);
-                    if (input) input.value = e.count;
-                });
+                getEntries()
+                    .filter(e => e.date === date)
+                    .forEach(e => {
+                        const input = document.getElementById(`day_${catId(e.category)}`);
+                        if (input) input.value = e.count;
+                    });
             }
             updateDayTotal();
+            document.getElementById('saveMsg').style.display = 'none';
         }
 
         function saveDay() {
             const date = document.getElementById('entryDate').value;
-            if (!date) {
-                alert('Selecciona una fecha');
-                return;
-            }
+            if (!date) { toast('Selecciona una fecha', 'warning'); return; }
 
             const entries = getEntries().filter(e => e.date !== date);
-            let saved = 0;
-            
+            let saved = 0, totalPatients = 0;
+
             CATEGORIES.forEach(cat => {
-                const count = parseInt(document.getElementById(`day_${cat}`).value) || 0;
+                const count = parseInt(document.getElementById(`day_${catId(cat)}`).value) || 0;
                 if (count > 0) {
-                    entries.push({
-                        id: Date.now() + Math.random(),
-                        date,
-                        category: cat,
-                        count
-                    });
+                    entries.push({ id: nextId(), date, category: cat, count });
                     saved++;
+                    totalPatients += count;
                 }
             });
 
-            if (saved === 0) {
-                alert('No hay pacientes para guardar');
-                return;
-            }
+            if (saved === 0) { toast('No hay pacientes para guardar', 'warning'); return; }
 
             saveEntries(entries);
-            alert(`Guardado: ${saved} categorías`);
+            showInlineMsg('saveMsg', `✓ Guardado — ${totalPatients} pacientes en ${saved} categorías`);
+            toast(`Día guardado: ${totalPatients} pacientes`, 'success');
         }
 
-        function deleteEntry(id) {
-            if (confirm('¿Eliminar este registro?')) {
-                const entries = getEntries().filter(e => e.id !== id);
-                saveEntries(entries);
-                updateHistory();
-                updateStats();
-            }
-        }
-
-        function updateMonthSelects() {
-            const now = new Date();
-            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            let html = '';
-            for (let i = 0; i < 12; i++) {
-                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                const label = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-                html += `<option value="${value}">${label}</option>`;
-            }
-            document.getElementById('statsMonthSelect').innerHTML = html;
-            document.getElementById('historyMonthSelect').innerHTML = html;
-            
-            document.getElementById('statsMonthSelect').value = currentMonth;
-            document.getElementById('historyMonthSelect').value = currentMonth;
-        }
+        // ── Data helpers ──────────────────────────────────────────────────────
 
         function getMonthData(month) {
             const entries = getEntries().filter(e => e.date.startsWith(month));
@@ -537,152 +756,132 @@
             return { entries, data };
         }
 
+        // ── Statistics ────────────────────────────────────────────────────────
+
         function updateStats() {
-            const monthSelect = document.getElementById('statsMonthSelect');
-            let month = monthSelect ? monthSelect.value : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-            
+            const sel = document.getElementById('statsMonthSelect');
+            const month = (sel && sel.value) ? sel.value : getCurrentMonth();
+
             const { entries, data } = getMonthData(month);
             const prices = getPrices();
-            
+
             const total = Object.values(data).reduce((a, b) => a + b, 0);
-            const days = new Set(entries.map(e => e.date)).size;
-            
+            const days  = new Set(entries.map(e => e.date)).size;
             let totalIncome = 0;
             Object.entries(data).forEach(([cat, count]) => {
-                const price = prices[cat] || 0;
-                totalIncome += count * price;
+                totalIncome += count * (prices[cat] || 0);
             });
-            
-            let statsHtml = `
+
+            let html = `
                 <div class="stat-card">
                     <div class="number">${total}</div>
                     <div class="label">Total Pacientes</div>
                 </div>
                 <div class="stat-card">
                     <div class="number">${days}</div>
-                    <div class="label">Días Laborados</div>
+                    <div class="label">Días Trabajados</div>
                 </div>
                 <div class="stat-card">
                     <div class="number">${days ? Math.round(total / days) : 0}</div>
-                    <div class="label">Promedio/Día</div>
+                    <div class="label">Media / Día</div>
                 </div>
             `;
-            
+
             if (totalIncome > 0) {
-                statsHtml += `
+                html += `
                     <div class="stat-card">
-                        <div class="number">${totalIncome.toFixed(2)}€</div>
-                        <div class="label">Ingresos del Mes</div>
+                        <div class="number" style="font-size:1.3rem;">${totalIncome.toFixed(2)}€</div>
+                        <div class="label">Ingresos Estimados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number" style="font-size:1.3rem;">${days ? (totalIncome / days).toFixed(2) : '0.00'}€</div>
+                        <div class="label">Ingresos / Día</div>
                     </div>
                 `;
             }
-            
-            const topCategory = Object.entries(data).sort((a, b) => b[1] - a[1])[0];
-            if (topCategory[1] > 0) {
-                statsHtml += `
+
+            const top = Object.entries(data).sort((a, b) => b[1] - a[1])[0];
+            if (top && top[1] > 0) {
+                html += `
                     <div class="stat-card">
-                        <div class="number" style="font-size: 1.2rem;">${topCategory[0]}</div>
-                        <div class="label">Top Categoría (${topCategory[1]})</div>
+                        <div class="number" style="font-size:1.1rem;">${top[0]}</div>
+                        <div class="label">Top Categoría (${top[1]})</div>
                     </div>
                 `;
             }
-            
-            document.getElementById('statsCards').innerHTML = statsHtml;
-            updateCharts(month, data, entries);
+
+            document.getElementById('statsCards').innerHTML = html;
+            updateCharts(month, data, entries, prices);
             updateAnnualChart(month);
         }
 
-        function updateAnnualChart(endMonth) {
-            const parts = endMonth.split('-');
-            const end = new Date(parts[0], parseInt(parts[1]) - 1, 1);
-            const labels = [];
-            const categoryData = {};
-            const monthTotals = [];
-            CATEGORIES.forEach(cat => categoryData[cat] = []);
+        // ── Charts ────────────────────────────────────────────────────────────
 
-            const prices = getPrices();
+        function updateCharts(month, data, entries, prices) {
+            if (pieChart)  pieChart.destroy();
+            if (barChart)  barChart.destroy();
+            if (lineChart) lineChart.destroy();
 
-            for (let i = 11; i >= 0; i--) {
-                const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
-                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                
-                const label = d.toLocaleDateString('es-ES', { month: 'short' });
-                labels.push(label);
-
-                const monthEntries = getEntries().filter(e => e.date.startsWith(monthStr));
-                let monthTotal = 0;
-                CATEGORIES.forEach(cat => {
-                    const catTotal = monthEntries.filter(e => e.category === cat).reduce((sum, e) => sum + e.count, 0);
-                    categoryData[cat].push(catTotal);
-                    const price = prices[cat] || 0;
-                    monthTotal += catTotal * price;
-                });
-                monthTotals.push(monthTotal);
-            }
-
-            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'];
-            
-            const datasets = CATEGORIES.map((cat, i) => ({
-                label: cat,
-                data: categoryData[cat],
-                backgroundColor: colors[i % colors.length],
-                stack: 'stack0'
-            }));
-
-            const ctx = document.getElementById('annualChart').getContext('2d');
-            if (annualChart) annualChart.destroy();
-
-                annualChart = new Chart(ctx, {
-                type: 'bar',
+            // Doughnut: only categories with data
+            const activeCats = CATEGORIES.filter(k => data[k] > 0);
+            pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
+                type: 'doughnut',
                 data: {
-                    labels: labels,
-                    datasets: [...datasets, {
-                        type: 'line',
-                        label: 'Ingresos (€)',
-                        data: monthTotals,
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        order: -1,
-                        yAxisID: 'y1'
+                    labels: activeCats,
+                    datasets: [{
+                        data: activeCats.map(k => data[k]),
+                        backgroundColor: activeCats.map(k => COLORS[CATEGORIES.indexOf(k) % COLORS.length])
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { title: { display: true, text: 'Distribución por Categoría' } }
+                }
+            });
+
+            // Bar + line: patients and income per category
+            const catIncome = CATEGORIES.map(cat => (data[cat] || 0) * (prices[cat] || 0));
+            barChart = new Chart(document.getElementById('barChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: CATEGORIES,
+                    datasets: [
+                        {
+                            label: 'Pacientes',
+                            data: CATEGORIES.map(cat => data[cat] || 0),
+                            backgroundColor: COLORS,
+                            order: 1
+                        },
+                        {
+                            type: 'line', label: 'Ingresos (€)', data: catIncome,
+                            borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.15)',
+                            fill: true, tension: 0.3, yAxisID: 'y1',
+                            order: 0,
+                            pointRadius: 5, pointHoverRadius: 7,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
                     plugins: {
-                        title: { display: true, text: 'Resumen Anual - Pacientes e Ingresos (Últimos 12 meses)' },
+                        title: { display: true, text: 'Pacientes por Categoría' },
                         tooltip: {
-                            filter: function(tooltipItem) {
-                                return tooltipItem.datasetIndex === 0;
-                            },
+                            mode: 'index',
+                            intersect: false,
                             callbacks: {
-                                title: function(tooltipItems) {
-                                    if (!tooltipItems || tooltipItems.length === 0) return '';
-                                    return tooltipItems[0].label || '';
-                                },
-                                label: function() {
-                                    return '';
-                                },
-                                afterBody: function(tooltipItems) {
-                                    if (!tooltipItems || tooltipItems.length === 0) return [];
-                                    const monthIndex = tooltipItems[0].dataIndex;
+                                title: ti => ti[0]?.label || '',
+                                label: () => null,
+                                afterBody(ti) {
+                                    if (!ti.length) return [];
+                                    const cat = ti[0].label;
+                                    const count = data[cat] || 0;
+                                    const price = prices[cat] || 0;
                                     const lines = [];
-                                    CATEGORIES.forEach((cat, i) => {
-                                        const val = categoryData[cat][monthIndex];
-                                        const price = prices[cat] || 0;
-                                        if (val > 0) {
-                                            lines.push(`${cat}: ${val}${price > 0 ? ` (${(val * price).toFixed(2)}€)` : ''}`);
-                                        }
-                                    });
-                                    let total = 0;
-                                    CATEGORIES.forEach(cat => {
-                                        total += categoryData[cat][monthIndex];
-                                    });
-                                    lines.push(`Total: ${total} pacientes`);
-                                    if (monthTotals[monthIndex] > 0) {
-                                        lines.push(`Ingresos: ${monthTotals[monthIndex].toFixed(2)}€`);
+                                    lines.push(`Pacientes: ${count}`);
+                                    if (price > 0) {
+                                        lines.push(`─────────────`);
+                                        lines.push(`Ingresos: ${(count * price).toFixed(2)}€`);
                                     }
                                     return lines;
                                 }
@@ -690,297 +889,499 @@
                         }
                     },
                     scales: {
-                        x: { stacked: true },
-                        y: { 
-                            beginAtZero: true,
-                            stacked: true,
-                            title: { display: true, text: 'Pacientes' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            beginAtZero: true,
-                            title: { display: true, text: 'Ingresos (€)' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateCharts(month, data, entries) {
-            const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'];
-            const prices = getPrices();
-            
-            if (pieChart) pieChart.destroy();
-            if (barChart) barChart.destroy();
-            if (lineChart) lineChart.destroy();
-
-            const pieCtx = document.getElementById('pieChart').getContext('2d');
-            pieChart = new Chart(pieCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(data).filter(k => data[k] > 0),
-                    datasets: [{
-                        data: Object.values(data).filter(v => v > 0),
-                        backgroundColor: colors
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Distribución por Categoría' }
+                        y:  { beginAtZero: true, title: { display: true, text: 'Pacientes' } },
+                        y1: { type: 'linear', display: true, position: 'right', beginAtZero: true,
+                              title: { display: true, text: 'Ingresos (€)' }, grid: { drawOnChartArea: false } }
                     }
                 }
             });
 
-            const barCtx = document.getElementById('barChart').getContext('2d');
-            const categoryIncome = CATEGORIES.map(cat => (data[cat] || 0) * (prices[cat] || 0));
-            barChart = new Chart(barCtx, {
+            // Stacked bar + income line: breakdown by category per day of month
+            const sortedDays = [...new Set(entries.map(e => e.date.slice(-2)))]
+                .sort((a, b) => parseInt(a) - parseInt(b));
+
+            const dayCatData    = {};
+            const dayIncomeData = [];
+            CATEGORIES.forEach(cat => dayCatData[cat] = []);
+
+            sortedDays.forEach(day => {
+                let dayIncome = 0;
+                CATEGORIES.forEach(cat => {
+                    const total = entries
+                        .filter(e => e.date.slice(-2) === day && e.category === cat)
+                        .reduce((s, e) => s + e.count, 0);
+                    dayCatData[cat].push(total);
+                    dayIncome += total * (prices[cat] || 0);
+                });
+                dayIncomeData.push(dayIncome);
+            });
+
+            const hasIncomeData = dayIncomeData.some(v => v > 0);
+
+            lineChart = new Chart(document.getElementById('lineChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: CATEGORIES,
-                    datasets: [{
-                        label: 'Pacientes',
-                        data: CATEGORIES.map(cat => data[cat] || 0),
-                        backgroundColor: colors
-                    }, {
-                        type: 'line',
-                        label: 'Ingresos (€)',
-                        data: categoryIncome,
-                        borderColor: '#e74c3c',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        yAxisID: 'y1'
-                    }]
+                    labels: sortedDays,
+                    datasets: [
+                        ...CATEGORIES.map((cat, i) => ({
+                            label: cat,
+                            data: dayCatData[cat],
+                            backgroundColor: COLORS[i % COLORS.length],
+                            stack: 'stack0',
+                            order: 1
+                        })),
+                        ...(hasIncomeData ? [{
+                            type: 'line',
+                            label: 'Ingresos (€)',
+                            data: dayIncomeData,
+                            borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)',
+                            fill: false, tension: 0.3,
+                            pointRadius: 4, pointHoverRadius: 6, borderWidth: 2,
+                            order: 0, yAxisID: 'y1'
+                        }] : [])
+                    ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     plugins: {
-                        title: { display: true, text: 'Pacientes por Categoría' },
+                        title: { display: true, text: 'Pacientes e Ingresos por Día del Mes' },
                         tooltip: {
+                            mode: 'index',
+                            intersect: false,
                             callbacks: {
-                                afterBody: function(tooltipItems) {
-                                    const cat = tooltipItems[0].label;
-                                    const count = data[cat] || 0;
-                                    const price = prices[cat] || 0;
-                                    if (price > 0) {
-                                        return `Ingresos: ${(count * price).toFixed(2)}€`;
-                                    }
-                                    return '';
+                                title: ti => `Día ${ti[0]?.label || ''}`,
+                                label: () => null,
+                                afterBody(ti) {
+                                    if (!ti.length) return [];
+                                    const idx = ti[0].dataIndex;
+                                    const lines = [];
+                                    CATEGORIES.forEach(cat => {
+                                        const val = dayCatData[cat][idx];
+                                        if (val > 0) {
+                                            const price = prices[cat] || 0;
+                                            lines.push(`${cat}: ${val}${price > 0 ? ` (${(val * price).toFixed(2)}€)` : ''}`);
+                                        }
+                                    });
+                                    const total = CATEGORIES.reduce((s, cat) => s + dayCatData[cat][idx], 0);
+                                    lines.push(`─────────────`);
+                                    lines.push(`Total: ${total} pacientes`);
+                                    if (dayIncomeData[idx] > 0) lines.push(`Ingresos: ${dayIncomeData[idx].toFixed(2)}€`);
+                                    return lines;
                                 }
                             }
                         }
                     },
                     scales: {
-                        y: { beginAtZero: true, title: { display: true, text: 'Pacientes' } },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            beginAtZero: true,
-                            title: { display: true, text: 'Ingresos (€)' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-
-            const dailyData = {};
-            entries.forEach(e => {
-                const day = e.date.slice(-2);
-                dailyData[day] = (dailyData[day] || 0) + e.count;
-            });
-
-            const lineCtx = document.getElementById('lineChart').getContext('2d');
-            lineChart = new Chart(lineCtx, {
-                type: 'line',
-                data: {
-                    labels: Object.keys(dailyData).sort((a, b) => parseInt(a) - parseInt(b)),
-                    datasets: [{
-                        label: 'Pacientes por Día',
-                        data: Object.keys(dailyData).sort((a, b) => parseInt(a) - parseInt(b)).map(d => dailyData[d]),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: { display: true, text: 'Pacientes por Día del Mes' }
-                    },
-                    scales: {
+                        x: { stacked: true },
                         y: {
-                            beginAtZero: true,
-                            min: 0,
-                            max: 30,
-                            ticks: {
-                                stepSize: 5
-                            },
+                            beginAtZero: true, stacked: true,
                             title: { display: true, text: 'Pacientes' }
-                        }
+                        },
+                        ...(hasIncomeData ? {
+                            y1: {
+                                type: 'linear', display: true, position: 'right',
+                                beginAtZero: true,
+                                title: { display: true, text: 'Ingresos (€)' },
+                                grid: { drawOnChartArea: false }
+                            }
+                        } : {})
                     }
                 }
             });
         }
+
+        function updateAnnualChart(endMonth) {
+            const [y, m] = endMonth.split('-').map(Number);
+            const end = new Date(y, m - 1, 1);
+            const labels = [], monthTotals = [];
+            const categoryData = {};
+            CATEGORIES.forEach(cat => categoryData[cat] = []);
+            const prices = getPrices();
+
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
+                const ms = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                labels.push(d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }));
+
+                const me = getEntries().filter(e => e.date.startsWith(ms));
+                let mTotal = 0;
+                CATEGORIES.forEach(cat => {
+                    const ct = me.filter(e => e.category === cat).reduce((s, e) => s + e.count, 0);
+                    categoryData[cat].push(ct);
+                    mTotal += ct * (prices[cat] || 0);
+                });
+                monthTotals.push(mTotal);
+            }
+
+            if (annualChart) annualChart.destroy();
+            annualChart = new Chart(document.getElementById('annualChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        ...CATEGORIES.map((cat, i) => ({
+                            label: cat,
+                            data: categoryData[cat],
+                            backgroundColor: COLORS[i % COLORS.length],
+                            stack: 'stack0'
+                        })),
+                        {
+                            type: 'line', label: 'Ingresos (€)', data: monthTotals,
+                            borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.1)',
+                            fill: true, tension: 0.3, order: -1, yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Resumen Anual — Pacientes e Ingresos (últimos 12 meses)' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                title: ti => ti[0]?.label || '',
+                                label: () => null,
+                                afterBody(ti) {
+                                    if (!ti.length) return [];
+                                    const idx = ti[0].dataIndex;
+                                    const lines = [];
+                                    CATEGORIES.forEach(cat => {
+                                        const val = categoryData[cat][idx];
+                                        const price = prices[cat] || 0;
+                                        if (val > 0) lines.push(`${cat}: ${val}${price > 0 ? ` (${(val * price).toFixed(2)}€)` : ''}`);
+                                    });
+                                    const total = CATEGORIES.reduce((s, cat) => s + categoryData[cat][idx], 0);
+                                    lines.push(`─────────────`);
+                                    lines.push(`Total: ${total} pacientes`);
+                                    if (monthTotals[idx] > 0) lines.push(`Ingresos: ${monthTotals[idx].toFixed(2)}€`);
+                                    return lines;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x:  { stacked: true },
+                        y:  { beginAtZero: true, stacked: true, title: { display: true, text: 'Pacientes' } },
+                        y1: { type: 'linear', display: true, position: 'right', beginAtZero: true,
+                              title: { display: true, text: 'Ingresos (€)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        // ── History ───────────────────────────────────────────────────────────
 
         function updateHistory() {
             const month = document.getElementById('historyMonthSelect').value;
             const { entries } = getMonthData(month);
-            
             const tbody = document.querySelector('#historyTable tbody');
+            const summaryEl = document.getElementById('historySummary');
+
             if (entries.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">No hay registros para este mes</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#888;padding:24px;">
+                    No hay registros para este mes
+                </td></tr>`;
+                summaryEl.innerHTML = '';
                 return;
             }
-            
-            entries.sort((a, b) => b.date.localeCompare(a.date));
-            tbody.innerHTML = entries.map(e => `
-                <tr>
-                    <td>${new Date(e.date).toLocaleDateString('es-ES')}</td>
-                    <td>${e.category}</td>
-                    <td>${e.count}</td>
-                    <td><button class="delete-btn" onclick="deleteEntry(${e.id})">Eliminar</button></td>
-                </tr>
-            `).join('');
-        }
 
-        function exportToExcel() {
-            const month = document.getElementById('statsMonthSelect').value;
-            const { entries, data } = getMonthData(month);
-            
-            let csv = 'Fecha,Categoría,Cantidad\n';
-            entries.sort((a, b) => a.date.localeCompare(b.date));
+            // Summary pills
+            const totalPac = entries.reduce((s, e) => s + e.count, 0);
+            const days = new Set(entries.map(e => e.date)).size;
+            summaryEl.innerHTML = `
+                <div class="summary-pills">
+                    <span class="pill">${totalPac} pacientes</span>
+                    <span class="pill">${days} días registrados</span>
+                    <span class="pill">Media: ${days ? Math.round(totalPac / days) : 0} pac/día</span>
+                </div>
+            `;
+
+            // Group by date, newest first
+            const grouped = {};
             entries.forEach(e => {
-                csv += `${e.date},${e.category},${e.count}\n`;
-            });
-            
-            csv += '\nResumen por Categoría\n';
-            csv += 'Categoría,Total\n';
-            Object.entries(data).forEach(([cat, count]) => {
-                csv += `${cat},${count}\n`;
+                if (!grouped[e.date]) grouped[e.date] = [];
+                grouped[e.date].push(e);
             });
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `resumen_${month}.csv`;
-            link.click();
+            tbody.innerHTML = Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(date => {
+                const dayEntries = grouped[date].sort(
+                    (a, b) => CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category)
+                );
+                const dayTotal = dayEntries.reduce((s, e) => s + e.count, 0);
+
+                const header = `
+                    <tr class="day-group-header">
+                        <td colspan="3">${formatDate(date)}</td>
+                        <td style="text-align:right;">${dayTotal} pac.</td>
+                    </tr>
+                `;
+
+                const rows = dayEntries.map(e => `
+                    <tr>
+                        <td style="padding-left:24px; color:#aaa; font-size:0.85rem;">↳</td>
+                        <td>${e.category}</td>
+                        <td>${e.count}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteEntry(${e.id})">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                return header + rows;
+            }).join('');
         }
 
-        function exportAnnualToExcel() {
-            const endMonth = document.getElementById('statsMonthSelect').value;
-            const parts = endMonth.split('-');
-            const end = new Date(parts[0], parseInt(parts[1]) - 1, 1);
-            let csv = 'Mes,' + CATEGORIES.join(',') + ',Total\n';
+        function deleteEntry(id) {
+            saveEntries(getEntries().filter(e => e.id !== id));
+            updateHistory();
+            toast('Registro eliminado', 'info');
+        }
+
+        // ── Data tab ──────────────────────────────────────────────────────────
+
+        function updateDataTab() {
+            const entries = getEntries();
+            const prices  = getPrices();
+            const months  = new Set(entries.map(e => e.date.substring(0, 7))).size;
+            const hasPrices = Object.keys(prices).length > 0;
+
+            document.getElementById('dataStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="number">${entries.length}</div>
+                    <div class="label">Registros totales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">${months}</div>
+                    <div class="label">Meses con datos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">${hasPrices ? '✓' : '—'}</div>
+                    <div class="label">Precios configurados</div>
+                </div>
+            `;
+        }
+
+        // ── Export ────────────────────────────────────────────────────────────
+
+        /**
+         * Export format v2:
+         * {
+         *   version: 2,
+         *   exportDate: "YYYY-MM-DD",
+         *   recordCount: N,
+         *   entries: [ { date, category, count }, ... ],
+         *   prices:  { category: price, ... }
+         * }
+         */
+        function exportToJSON() {
+            const entries = getEntries();
+            const prices  = getPrices();
+            const today   = new Date().toISOString().slice(0, 10);
+            const backup  = {
+                version: 2,
+                exportDate: today,
+                recordCount: entries.length,
+                entries: entries.map(({ date, category, count }) => ({ date, category, count })),
+                prices
+            };
+            downloadFile(
+                JSON.stringify(backup, null, 2),
+                `clinica_backup_${today}.json`,
+                'application/json'
+            );
+            toast(`Exportados ${entries.length} registros + precios`, 'success');
+        }
+
+        function exportToCSV() {
+            const sel   = document.getElementById('statsMonthSelect');
+            const month = (sel && sel.value) ? sel.value : getCurrentMonth();
+            const { entries, data } = getMonthData(month);
+            const prices = getPrices();
+
+            let csv = '\uFEFF'; // UTF-8 BOM so Excel opens it correctly
+            csv += 'Fecha,Categoría,Cantidad,Precio unitario (€),Ingresos (€)\n';
+            entries
+                .slice()
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .forEach(e => {
+                    const price = prices[e.category] || 0;
+                    csv += `${e.date},${e.category},${e.count},${price},${(e.count * price).toFixed(2)}\n`;
+                });
+
+            csv += '\nResumen por Categoría\n';
+            csv += 'Categoría,Total Pacientes,Precio (€),Ingresos (€)\n';
+            CATEGORIES.forEach(cat => {
+                const count = data[cat] || 0;
+                const price = prices[cat] || 0;
+                if (count > 0) csv += `${cat},${count},${price},${(count * price).toFixed(2)}\n`;
+            });
+            const totPac = Object.values(data).reduce((a, b) => a + b, 0);
+            const totInc = CATEGORIES.reduce((s, cat) => s + (data[cat] || 0) * (prices[cat] || 0), 0);
+            csv += `TOTAL,${totPac},,${totInc.toFixed(2)}\n`;
+
+            downloadFile(csv, `resumen_${month}.csv`, 'text/csv;charset=utf-8;');
+            toast('CSV mensual exportado', 'success');
+        }
+
+        function exportAnnualToCSV() {
+            const sel      = document.getElementById('statsMonthSelect');
+            const endMonth = (sel && sel.value) ? sel.value : getCurrentMonth();
+            const [y, m]   = endMonth.split('-').map(Number);
+            const end      = new Date(y, m - 1, 1);
+            const prices   = getPrices();
+
+            let csv = '\uFEFF';
+            csv += `Mes,${CATEGORIES.join(',')},Total Pacientes,Ingresos (€)\n`;
 
             for (let i = 11; i >= 0; i--) {
-                const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
-                const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                const label = d.toLocaleDateString('es-ES', { month: 'long' });
+                const d  = new Date(end.getFullYear(), end.getMonth() - i, 1);
+                const ms = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const label = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                const me = getEntries().filter(e => e.date.startsWith(ms));
 
-                const monthEntries = getEntries().filter(e => e.date.startsWith(monthStr));
-                let rowTotal = 0;
-                let rowValues = CATEGORIES.map(cat => {
-                    const catTotal = monthEntries.filter(e => e.category === cat).reduce((sum, e) => sum + e.count, 0);
-                    rowTotal += catTotal;
-                    return catTotal;
+                let rowTotal = 0, rowIncome = 0;
+                const rowVals = CATEGORIES.map(cat => {
+                    const ct = me.filter(e => e.category === cat).reduce((s, e) => s + e.count, 0);
+                    rowTotal  += ct;
+                    rowIncome += ct * (prices[cat] || 0);
+                    return ct;
                 });
-                csv += `${label},${rowValues.join(',')},${rowTotal}\n`;
+                csv += `${label},${rowVals.join(',')},${rowTotal},${rowIncome.toFixed(2)}\n`;
             }
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `resumen_anual_${endMonth}.csv`;
-            link.click();
+            downloadFile(csv, `resumen_anual_${endMonth}.csv`, 'text/csv;charset=utf-8;');
+            toast('Informe anual exportado', 'success');
         }
 
-        function exportToJSON() {
-            const entries = getEntries().map(e => ({
-                date: e.date,
-                category: e.category,
-                count: e.count
-            }));
-            const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `clinic_backup_${new Date().toISOString().slice(0, 10)}.json`;
-            link.click();
-            document.getElementById('totalRecords').textContent = entries.length;
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const url  = URL.createObjectURL(blob);
+            const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
+
+        // ── Import ────────────────────────────────────────────────────────────
 
         function importFromJSON(event) {
             const file = event.target.files[0];
             if (!file) return;
-            
+            event.target.value = ''; // reset so same file can be picked again
+
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function(ev) {
                 try {
-                    const entries = JSON.parse(e.target.result);
-                    if (!Array.isArray(entries)) {
-                        alert('Formato de archivo inválido');
+                    const parsed = JSON.parse(ev.target.result);
+                    const mode   = document.querySelector('input[name="importMode"]:checked').value;
+
+                    // Support v1 (plain array) and v2 (object with metadata)
+                    let importedEntries, importedPrices;
+                    if (Array.isArray(parsed)) {
+                        importedEntries = parsed;
+                        importedPrices  = null;
+                    } else if (parsed.entries && Array.isArray(parsed.entries)) {
+                        importedEntries = parsed.entries;
+                        importedPrices  = parsed.prices || null;
+                    } else {
+                        toast('Formato de archivo no reconocido', 'error', 5000);
                         return;
                     }
-                    
-                    const entriesWithIds = entries.map(e => ({
-                        id: Date.now() + Math.random(),
-                        date: e.date,
-                        category: e.category,
-                        count: e.count
-                    }));
-                    
-                    const currentEntries = getEntries();
-                    const merged = [...currentEntries, ...entriesWithIds];
-                    saveEntries(merged);
-                    
-                    alert(`Importados ${entries.length} registros. Total: ${merged.length}`);
-                    document.getElementById('totalRecords').textContent = merged.length;
+
+                    // Basic validation
+                    const valid = importedEntries.filter(
+                        e => e.date && typeof e.date === 'string' &&
+                             e.category && typeof e.category === 'string' &&
+                             typeof e.count === 'number' && e.count >= 0
+                    );
+
+                    if (valid.length === 0) {
+                        toast('No se encontraron registros válidos en el archivo', 'error', 5000);
+                        return;
+                    }
+
+                    if (mode === 'replace') {
+                        const newEntries = valid.map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
+                        saveEntries(newEntries);
+                        if (importedPrices) savePricesToStorage(importedPrices);
+                        toast(
+                            `Datos reemplazados: ${newEntries.length} registros${importedPrices ? ' + precios' : ''} importados`,
+                            'success', 5000
+                        );
+                    } else {
+                        // Merge: skip entries that already exist (same date + category)
+                        const current     = getEntries();
+                        const existingKeys = new Set(current.map(e => `${e.date}|${e.category}`));
+                        const toAdd = valid
+                            .filter(e => !existingKeys.has(`${e.date}|${e.category}`))
+                            .map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
+
+                        saveEntries([...current, ...toAdd]);
+
+                        // Merge prices: current values take priority
+                        if (importedPrices) {
+                            savePricesToStorage({ ...importedPrices, ...getPrices() });
+                        }
+
+                        const skipped = valid.length - toAdd.length;
+                        toast(
+                            `Añadidos ${toAdd.length} registros` +
+                            (skipped  > 0 ? `, ${skipped} duplicados omitidos` : '') +
+                            (importedPrices ? ' + precios combinados' : ''),
+                            'success', 5000
+                        );
+                    }
+
+                    updateDataTab();
                 } catch (err) {
-                    alert('Error al leer el archivo: ' + err.message);
+                    toast('Error al leer el archivo: ' + err.message, 'error', 6000);
                 }
             };
             reader.readAsText(file);
-            event.target.value = '';
         }
 
-        function updateTotalRecords() {
-            const entries = getEntries();
-            document.getElementById('totalRecords').textContent = entries.length;
-        }
+        // ── Clear all data (two-step, no browser dialog) ──────────────────────
 
+        let clearTimer;
         function clearAllData() {
-            if (confirm('⚠️ ¿Estás seguro de BORRAR TODOS los datos? Esta acción no se puede deshacer.')) {
-                if (confirm('¿Confirmas definitivamente eliminar todos los registros?')) {
-                    localStorage.removeItem('clinicEntries');
-                    updateTotalRecords();
-                    alert('Todos los datos han sido eliminados.');
-                }
+            const btn = document.getElementById('clearBtn');
+            if (btn.dataset.confirm === '1') {
+                clearTimeout(clearTimer);
+                localStorage.removeItem('clinicEntries');
+                localStorage.removeItem('clinicPrices');
+                localStorage.removeItem('clinicNextId');
+                btn.dataset.confirm = '';
+                btn.textContent     = '🗑️ Borrar Todos los Datos';
+                btn.className       = 'btn btn-danger';
+                updateDataTab();
+                toast('Todos los datos han sido eliminados', 'info');
+            } else {
+                btn.dataset.confirm = '1';
+                btn.textContent     = '⚠️ Confirma: clic de nuevo para borrar todo (5 s)';
+                btn.className       = 'btn btn-warning';
+                clearTimer = setTimeout(() => {
+                    btn.dataset.confirm = '';
+                    btn.textContent     = '🗑️ Borrar Todos los Datos';
+                    btn.className       = 'btn btn-danger';
+                }, 5000);
             }
         }
 
-        function getPrices() {
-            return JSON.parse(localStorage.getItem('clinicPrices') || '{}');
-        }
-
-        function savePricesToStorage(prices) {
-            localStorage.setItem('clinicPrices', JSON.stringify(prices));
-        }
+        // ── Prices / Config ───────────────────────────────────────────────────
 
         function loadPrices() {
             const prices = getPrices();
-            const tbody = document.getElementById('configTableBody');
-            tbody.innerHTML = CATEGORIES.map(cat => `
+            document.getElementById('configTableBody').innerHTML = CATEGORIES.map(cat => `
                 <tr class="category-row">
                     <td>${cat}</td>
-                    <td><input type="number" id="price_${cat}" min="0" step="0.01" value="${prices[cat] || ''}" placeholder="0.00"></td>
+                    <td>
+                        <input type="number" id="price_${catId(cat)}"
+                               min="0" step="0.01"
+                               value="${prices[cat] || ''}"
+                               placeholder="0.00">
+                    </td>
                 </tr>
             `).join('');
         }
@@ -988,13 +1389,12 @@
         function savePrices() {
             const prices = {};
             CATEGORIES.forEach(cat => {
-                const value = parseFloat(document.getElementById(`price_${cat}`).value);
-                if (!isNaN(value) && value > 0) {
-                    prices[cat] = value;
-                }
+                const v = parseFloat(document.getElementById(`price_${catId(cat)}`).value);
+                if (!isNaN(v) && v > 0) prices[cat] = v;
             });
             savePricesToStorage(prices);
-            alert('Precios guardados correctamente');
+            showInlineMsg('pricesSaveMsg', '✓ Precios guardados', 4000);
+            toast('Precios guardados', 'success');
         }
     </script>
 </body>
