@@ -228,12 +228,151 @@
 
         .save-msg { color: var(--success); font-weight: 500; font-size: 0.95rem; }
 
-        @media (max-width: 768px) {
+        /* ── Responsive Layout Utilities ──────────────────────────────── */
+
+        /* Daily tab: sidebar split on desktop */
+        .daily-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .daily-sidebar {
+            position: sticky;
+            top: 20px;
+        }
+
+        /* Stats: keep charts full-width below chart pair */
+        .chart-wrapper-full {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #f1f5f9;
+            margin-top: 24px;
+        }
+
+        /* Data tab: two-column on desktop */
+        .data-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+        /* Config: two panels side by side */
+        .config-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        /* Table scroll wrapper for narrow screens */
+        .table-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+        }
+
+        /* ── Breakpoints ─────────────────────────────────────────────── */
+
+        /* ≥ 640px — small tablets */
+        @media (min-width: 640px) {
+            body { padding: 30px 24px; }
+            h1 { font-size: 2rem; }
+        }
+
+        /* ≥ 768px — tablets */
+        @media (min-width: 768px) {
+            .container { max-width: 960px; }
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* ≥ 1024px — small desktops */
+        @media (min-width: 1024px) {
+            .container { max-width: 1100px; }
+
+            .daily-layout {
+                grid-template-columns: 1fr 300px;
+            }
+
+            .config-layout {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .data-layout {
+                grid-template-columns: 1fr 1fr;
+                gap: 0 40px;
+            }
+
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+        }
+
+        /* ≥ 1280px — full desktop */
+        @media (min-width: 1280px) {
+            .container { max-width: 1280px; }
+            body { padding: 40px 32px; }
+            h1 { font-size: 2.5rem; }
+
+            .daily-layout {
+                grid-template-columns: 1fr 320px;
+            }
+
+            .charts-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .chart-wrapper { height: 380px; }
+        }
+
+        /* ≥ 1536px — 1080p wide */
+        @media (min-width: 1536px) {
+            .container { max-width: 1480px; }
+
+            .daily-layout {
+                grid-template-columns: 1fr 360px;
+            }
+
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+            .chart-wrapper { height: 400px; }
+            .card { padding: 40px 48px; }
+        }
+
+        /* ── Mobile overrides (< 640px) ──────────────────────────────── */
+        @media (max-width: 639px) {
+            body { padding: 16px 12px; }
+            h1 { font-size: 1.5rem; margin-bottom: 20px; }
+            .card { padding: 20px 16px; border-radius: 16px; }
+            .tabs {
+                border-radius: 14px; padding: 8px;
+                justify-content: flex-start;
+                overflow-x: auto; flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                gap: 4px;
+            }
+            .tab { white-space: nowrap; padding: 10px 16px; font-size: 0.9rem; }
             .charts-container { grid-template-columns: 1fr; }
-            .tabs { border-radius: 16px; padding: 12px; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
-            .tab { white-space: nowrap; }
             .month-header { flex-direction: column; align-items: flex-start; }
-            .card { padding: 25px 20px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .stat-card .number { font-size: 1.6rem; }
+            .btn { padding: 10px 16px; font-size: 0.9rem; }
+            .input-group { flex-direction: column; align-items: stretch; }
+            .data-layout { grid-template-columns: 1fr; }
+            .config-layout { grid-template-columns: 1fr; }
+        }
+
+        /* ── Medium mobile (640–767px) ───────────────────────────────── */
+        @media (min-width: 640px) and (max-width: 767px) {
+            .tabs {
+                justify-content: flex-start;
+                overflow-x: auto; flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+            .tab { white-space: nowrap; }
+            .charts-container { grid-template-columns: 1fr; }
+            .month-header { flex-direction: column; align-items: flex-start; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -253,25 +392,37 @@
         <div id="daily-tab">
             <div class="card">
                 <h2>Registrar Pacientes del Día</h2>
-                <div class="input-group">
-                    <input type="date" id="entryDate" onchange="loadDayData()">
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Categoría</th>
-                            <th style="width:130px;">Pacientes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dailyTableBody"></tbody>
-                </table>
-                <div class="day-total">
-                    <span>Total del día</span>
-                    <span class="total-value" id="dayTotal">0</span>
-                </div>
-                <div style="margin-top:15px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn btn-success" onclick="saveDay()">💾 Guardar Día</button>
-                    <span id="saveMsg" class="save-msg" style="display:none;"></span>
+                <div class="daily-layout">
+                    <!-- Left: date + table -->
+                    <div>
+                        <div class="input-group">
+                            <input type="date" id="entryDate" onchange="loadDayData()">
+                        </div>
+                        <div class="table-scroll">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Categoría</th>
+                                        <th style="width:130px;">Pacientes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dailyTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Right: sticky summary -->
+                    <div class="daily-sidebar">
+                        <div class="day-total" style="flex-direction:column; align-items:stretch; gap:8px;">
+                            <span style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">Total del día</span>
+                            <span class="total-value" id="dayTotal" style="font-size:3rem; text-align:center; padding:12px 0;">0</span>
+                            <span style="font-size:0.85rem; color:var(--text-muted); text-align:center;">pacientes</span>
+                        </div>
+                        <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+                            <button class="btn btn-success" style="width:100%; justify-content:center;" onclick="saveDay()">💾 Guardar Día</button>
+                            <span id="saveMsg" class="save-msg" style="display:none; text-align:center;"></span>
+                        </div>
+                        <div id="dailySidebarStats" style="margin-top:20px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -293,10 +444,10 @@
                     <div class="chart-wrapper"><canvas id="pieChart"></canvas></div>
                     <div class="chart-wrapper"><canvas id="barChart"></canvas></div>
                 </div>
-                <div style="margin-top:20px; height:280px;">
+                <div class="chart-wrapper-full" style="height:300px;">
                     <canvas id="lineChart"></canvas>
                 </div>
-                <div style="margin-top:30px; height:320px;">
+                <div class="chart-wrapper-full" style="height:340px;">
                     <canvas id="annualChart"></canvas>
                 </div>
             </div>
@@ -312,6 +463,7 @@
                     </div>
                 </div>
                 <div id="historySummary"></div>
+                <div class="table-scroll">
                 <table id="historyTable">
                     <thead>
                         <tr>
@@ -323,6 +475,7 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                </div><!-- end table-scroll -->
             </div>
         </div>
 
@@ -330,129 +483,142 @@
         <div id="data-tab" style="display:none;">
             <div class="card">
                 <h2>Gestión de Datos</h2>
-
-                <div class="data-section">
-                    <h3>📤 Exportar copia de seguridad</h3>
-                    <div class="info-box">
-                        Exporta <strong>todos los datos</strong> — registros y precios — en un único archivo JSON.
-                        Puedes abrirlo en cualquier ordenador o navegador con esta misma aplicación.
-                    </div>
-                    <div class="input-group">
-                        <button class="btn btn-success" onclick="exportToJSON()">📤 Exportar todo (JSON)</button>
-                    </div>
-                </div>
-
-                <div class="data-section">
-                    <h3>📥 Importar copia de seguridad</h3>
-                    <div class="info-box">
-                        Importa un archivo JSON exportado desde esta aplicación.
-                        Elige cómo se combinarán los datos:
-                    </div>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="importMode" value="merge" checked>
-                            <div>
-                                <strong>Combinar</strong> — añade los registros del archivo sin borrar los actuales.
-                                Los duplicados (mismo día y categoría) se omiten.
+                <div class="data-layout">
+                    <!-- Left column -->
+                    <div>
+                        <div class="data-section" style="padding-top:0; border-top:none;">
+                            <h3>📤 Exportar copia de seguridad</h3>
+                            <div class="info-box">
+                                Exporta <strong>todos los datos</strong> — registros, precios, comisiones y datos de clínica — en un único archivo JSON.
+                                Puedes abrirlo en cualquier ordenador o navegador con esta misma aplicación.
                             </div>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="importMode" value="replace">
-                            <div>
-                                <strong>Reemplazar</strong> — borra todos los datos actuales y los sustituye por los del archivo.
+                            <div class="input-group">
+                                <button class="btn btn-success" onclick="exportToJSON()">📤 Exportar todo (JSON)</button>
                             </div>
-                        </label>
-                    </div>
-                    <div class="input-group">
-                        <button class="btn" onclick="document.getElementById('importFile').click()">
-                            📥 Seleccionar archivo JSON
-                        </button>
-                        <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importFromJSON(event)">
-                        <button class="btn btn-warning" onclick="loadSampleData()">🧪 Cargar datos de ejemplo</button>
-                    </div>
-                </div>
+                        </div>
 
-                <div class="data-section">
-                    <h3>📈 Estado actual</h3>
-                    <div class="stats-grid" id="dataStats" style="max-width:520px;"></div>
-                </div>
+                        <div class="data-section">
+                            <h3>📥 Importar copia de seguridad</h3>
+                            <div class="info-box">
+                                Importa un archivo JSON exportado desde esta aplicación.
+                                Elige cómo se combinarán los datos:
+                            </div>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="importMode" value="merge" checked>
+                                    <div>
+                                        <strong>Combinar</strong> — añade los registros del archivo sin borrar los actuales.
+                                        Los duplicados (mismo día y categoría) se omiten.
+                                    </div>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="importMode" value="replace">
+                                    <div>
+                                        <strong>Reemplazar</strong> — borra todos los datos actuales y los sustituye por los del archivo.
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="input-group">
+                                <button class="btn" onclick="document.getElementById('importFile').click()">
+                                    📥 Seleccionar archivo JSON
+                                </button>
+                                <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importFromJSON(event)">
+                                <button class="btn btn-warning" onclick="loadSampleData()">🧪 Datos de ejemplo</button>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="data-section">
-                    <h3 style="color:#e74c3c;">⚠️ Zona de peligro</h3>
-                    <p style="color:#888; margin-bottom:12px; font-size:0.9rem;">
-                        Elimina permanentemente todos los registros y la configuración de precios.
-                    </p>
-                    <button class="btn btn-danger" id="clearBtn" onclick="clearAllData()">
-                        🗑️ Borrar Todos los Datos
-                    </button>
+                    <!-- Right column -->
+                    <div>
+                        <div class="data-section" style="padding-top:0; border-top:none;">
+                            <h3>📈 Estado actual</h3>
+                            <div class="stats-grid" id="dataStats" style="grid-template-columns: repeat(auto-fit, minmax(140px,1fr));"></div>
+                        </div>
+
+                        <div class="data-section">
+                            <h3 style="color:#ef4444;">⚠️ Zona de peligro</h3>
+                            <p style="color:#94a3b8; margin-bottom:12px; font-size:0.9rem;">
+                                Elimina permanentemente todos los registros y la configuración de precios.
+                            </p>
+                            <button class="btn btn-danger" id="clearBtn" onclick="clearAllData()">
+                                🗑️ Borrar Todos los Datos
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- ── Configuration ─────────────────────────────────────────────── -->
         <div id="config-tab" style="display:none;">
-            <div class="card">
-                <h2>Datos de la Clínica</h2>
-                <div class="info-box">
-                    Esta información aparecerá en el encabezado de las facturas generadas.
-                </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-                    <div>
-                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Nombre / Clínica</label>
-                        <input type="text" id="clinicName" placeholder="Ej: Clínica Ejemplo" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+            <div class="config-layout">
+
+                <!-- Left: clinic info -->
+                <div class="card" style="margin-bottom:0;">
+                    <h2>Datos de la Clínica</h2>
+                    <div class="info-box">
+                        Esta información aparecerá en el encabezado del Payment Order.
                     </div>
-                    <div>
-                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Médico / Profesional</label>
-                        <input type="text" id="clinicDoctor" placeholder="Ej: Dr. García López" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
+                        <div style="grid-column:1/-1;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Nombre / Clínica</label>
+                            <input type="text" id="clinicName" placeholder="Ej: Clínica Ejemplo" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Médico / Profesional</label>
+                            <input type="text" id="clinicDoctor" placeholder="Dr. García López" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">NIF / CIF</label>
+                            <input type="text" id="clinicNif" placeholder="12345678A" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Teléfono</label>
+                            <input type="text" id="clinicPhone" placeholder="612 345 678" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">% general de la clínica</label>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="number" id="defaultCommission" min="0" max="100" step="0.1" placeholder="Ej: 30" style="width:100%;">
+                                <span style="color:var(--text-muted); white-space:nowrap;">%</span>
+                            </div>
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Dirección</label>
+                            <input type="text" id="clinicAddress" placeholder="Calle Mayor 1, 28001 Madrid" style="width:100%;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">NIF / CIF</label>
-                        <input type="text" id="clinicNif" placeholder="Ej: 12345678A" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <button class="btn btn-success" onclick="saveClinicInfo()">💾 Guardar Datos</button>
+                        <span id="clinicSaveMsg" class="save-msg" style="display:none;"></span>
                     </div>
-                    <div>
-                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Teléfono</label>
-                        <input type="text" id="clinicPhone" placeholder="Ej: 612 345 678" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
-                    </div>
-                    <div style="grid-column:1/-1;">
-                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Dirección</label>
-                        <input type="text" id="clinicAddress" placeholder="Ej: Calle Mayor 1, 28001 Madrid" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
-                    </div>
-                </div>
-                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding-bottom:20px; border-bottom:1px solid #eee; margin-bottom:20px;">
-                    <button class="btn btn-success" onclick="saveClinicInfo()">💾 Guardar Datos</button>
-                    <span id="clinicSaveMsg" class="save-msg" style="display:none;"></span>
                 </div>
 
-                <h2>Precios y Comisiones por Categoría</h2>
-                <div class="info-box">
-                    Define el precio por paciente y el porcentaje que retiene la clínica en cada categoría.
-                    La columna <strong>% Clínica</strong> es opcional: si se deja vacía se aplica el porcentaje general.
-                </div>
-
-                <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px; flex-wrap:wrap;">
-                    <label style="font-weight:600; color:#444;">% general de la clínica:</label>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <input type="number" id="defaultCommission" min="0" max="100" step="0.1"
-                               placeholder="Ej: 30" style="width:110px; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
-                        <span style="color:#666;">%</span>
+                <!-- Right: prices + commissions -->
+                <div class="card" style="margin-bottom:0;">
+                    <h2>Precios y Comisiones</h2>
+                    <div class="info-box">
+                        Precio por paciente y % de retención de la clínica por categoría.
+                        Si <strong>% Clínica</strong> se deja vacío, se aplica el % general.
                     </div>
-                    <span style="font-size:0.85rem; color:#888;">(se aplica a todas las categorías que no tengan % específico)</span>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th style="width:140px;">Precio (€)</th>
+                                    <th style="width:140px;">% Clínica</th>
+                                </tr>
+                            </thead>
+                            <tbody id="configTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <button class="btn btn-success" onclick="savePrices()">💾 Guardar Precios</button>
+                        <span id="pricesSaveMsg" class="save-msg" style="display:none;"></span>
+                    </div>
                 </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Categoría</th>
-                            <th style="width:160px;">Precio Unit. (€)</th>
-                            <th style="width:170px;">% Clínica <span style="font-weight:400; font-size:0.8rem;">(vacío = general)</span></th>
-                        </tr>
-                    </thead>
-                    <tbody id="configTableBody"></tbody>
-                </table>
-                <div style="margin-top:15px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn btn-success" onclick="savePrices()">💾 Guardar Precios y Comisiones</button>
-                    <span id="pricesSaveMsg" class="save-msg" style="display:none;"></span>
-                </div>
             </div>
         </div>
     </div>
@@ -463,13 +629,21 @@
         // ── Constants ─────────────────────────────────────────────────────────
 
         const CATEGORIES = [
-            'Adeslas', 'Asisa', 'AXA', 'Caser', 'DKV', 'DKV Revision',
-            'Mapfre', 'Privado', 'Privado Efectivo', 'Sanitas', 'Other'
+            'Adeslas', 'Adeslas Revisión', 'Adeslas Funcionarios',
+            'DKV', 'DKV Revisión', 'DKV Famedic', 'DKV Famedic Revisión',
+            'Mapfre', 'Mapfre Revisión',
+            'AXA', 'AXA Revisión',
+            'Privado Efectivo', 'Privado Tarjeta',
+            'Vacunas'
         ];
 
         const COLORS = [
-            '#667eea','#764ba2','#f093fb','#f5576c','#4facfe',
-            '#00c2b8','#43e97b','#38f9d7','#fa709a','#fee140','#30cfd0'
+            '#667eea','#5b8dee','#3b82f6',   // Adeslas group (blues)
+            '#10b981','#34d399','#059669','#6ee7b7', // DKV group (greens)
+            '#f59e0b','#fbbf24',              // Mapfre group (ambers)
+            '#ef4444','#f87171',              // AXA group (reds)
+            '#8b5cf6','#a78bfa',              // Privado group (purples)
+            '#06b6d4'                          // Vacunas (cyan)
         ];
 
         let pieChart, barChart, lineChart, annualChart;
@@ -1417,16 +1591,17 @@
                 <tr id="row-${i}">
                     <td>${l.cat}</td>
                     <td class="num">${l.count}</td>
-                    <td class="num">${l.price > 0 ? l.price.toFixed(2) + ' €' : '—'}</td>
-                    <td class="num gross" id="gross-${i}">${l.gross > 0 ? l.gross.toFixed(2) + ' €' : '—'}</td>
                     <td class="num">
                         <input class="cobrado-input" id="cobrado-${i}"
-                               type="number" min="0" step="0.01"
-                               value="${l.gross.toFixed(2)}"
+                               type="number" min="0" max="${l.count}" step="1"
+                               value="${l.count}"
                                oninput="recalc()"
-                               ${l.gross === 0 ? 'disabled' : ''}>
-                        <span class="cobrado-print">${l.gross.toFixed(2)} €</span>
+                               ${l.count === 0 ? 'disabled' : ''}>
+                        <span class="cobrado-print">${l.count}</span>
                     </td>
+                    <td class="num">${l.price > 0 ? l.price.toFixed(2) + ' €' : '—'}</td>
+                    <td class="num gross">${l.gross > 0 ? l.gross.toFixed(2) + ' €' : '—'}</td>
+                    <td class="num" id="cobrado-eur-${i}">—</td>
                     <td class="num pending" id="pending-${i}">—</td>
                     <td class="num">${l.commPct > 0 ? l.commPct + ' %' : '—'}</td>
                     <td class="num ret"    id="ret-${i}">—</td>
@@ -1440,25 +1615,25 @@
 <title>Payment Order ${orderNum}</title>
 <style>
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
-  body { background:#f4f6fb; padding:20px; color:#222; font-size:13px; }
-  .page { background:white; max-width:1060px; margin:0 auto; padding:36px 40px 30px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
+  body { background:#f4f6fb; padding:30px; color:#222; font-size:16px; }
+  .page { background:white; max-width:1400px; margin:0 auto; padding:50px 50px 40px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
 
-  .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:28px; padding-bottom:18px; border-bottom:3px solid #667eea; }
-  .inv-from { line-height:1.6; font-size:0.82rem; color:#444; }
-  .inv-clinic { font-size:1.2rem; font-weight:700; color:#222; margin-bottom:3px; }
+  .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; padding-bottom:24px; border-bottom:3px solid #667eea; }
+  .inv-from { line-height:1.7; font-size:0.95rem; color:#444; }
+  .inv-clinic { font-size:1.5rem; font-weight:700; color:#222; margin-bottom:4px; }
   .inv-meta { text-align:right; }
-  .inv-num { font-size:1.4rem; font-weight:700; color:#667eea; }
-  .inv-date, .inv-period { font-size:0.78rem; color:#666; margin-top:3px; }
-  .inv-comm-note { font-size:0.75rem; color:#764ba2; margin-top:5px; font-weight:600; }
+  .inv-num { font-size:1.8rem; font-weight:700; color:#667eea; }
+  .inv-date, .inv-period { font-size:0.9rem; color:#666; margin-top:4px; }
+  .inv-comm-note { font-size:0.85rem; color:#764ba2; margin-top:6px; font-weight:600; }
 
-  .inv-title { font-size:0.9rem; font-weight:600; color:#555; margin-bottom:5px; letter-spacing:0.5px; text-transform:uppercase; }
-  .inv-subtitle { font-size:0.75rem; color:#888; margin-bottom:16px; }
+  .inv-title { font-size:1.1rem; font-weight:600; color:#555; margin-bottom:8px; letter-spacing:0.5px; text-transform:uppercase; }
+  .inv-subtitle { font-size:0.88rem; color:#888; margin-bottom:20px; }
 
-  table { width:100%; border-collapse:collapse; margin-bottom:22px; font-size:0.8rem; }
+  table { width:100%; border-collapse:collapse; margin-bottom:30px; font-size:0.95rem; }
   thead tr { background:#667eea; color:white; }
-  th { padding:8px 10px; text-align:left; font-weight:600; }
+  th { padding:12px 14px; text-align:left; font-weight:600; }
   th.num { text-align:right; }
-  td { padding:7px 10px; border-bottom:1px solid #eee; vertical-align:middle; }
+  td { padding:11px 14px; border-bottom:1px solid #eee; vertical-align:middle; }
   td.num { text-align:right; }
   td.gross   { color:#2c3e50; }
   td.pending { color:#e67e22; font-weight:600; }
@@ -1468,51 +1643,40 @@
   tr.fully-paid td { background:#f0fff4; }
   tr.has-pending td { background:#fff8f0; }
 
-  .cobrado-input { width:82px; padding:4px 6px; border:2px solid #ddd; border-radius:5px; font-size:0.8rem; text-align:right; transition:border-color 0.2s; }
+  .cobrado-input { width:80px; padding:6px 10px; border:2px solid #ddd; border-radius:8px; font-size:0.95rem; text-align:right; transition:border-color 0.2s; }
   .cobrado-input:focus { outline:none; border-color:#667eea; }
   .cobrado-input.partial { border-color:#e67e22; background:#fff8f0; }
   .cobrado-input.full    { border-color:#27ae60; background:#f0fff4; }
   .cobrado-print { display:none; }
 
-  .totals-area { display:flex; gap:16px; justify-content:flex-end; margin-bottom:24px; flex-wrap:wrap; }
-  .totals-box { min-width:280px; border:2px solid #eee; border-radius:8px; overflow:hidden; }
-  .totals-box h4 { padding:7px 14px; background:#f8f9ff; color:#667eea; font-size:0.75rem; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid #eee; }
-  .totals-row { display:flex; justify-content:space-between; padding:7px 14px; font-size:0.82rem; }
+  .totals-area { display:flex; gap:20px; justify-content:flex-end; margin-bottom:30px; flex-wrap:wrap; }
+  .totals-box { min-width:300px; border:2px solid #eee; border-radius:10px; overflow:hidden; }
+  .totals-box h4 { padding:10px 16px; background:#f8f9ff; color:#667eea; font-size:0.85rem; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid #eee; }
+  .totals-row { display:flex; justify-content:space-between; padding:10px 16px; font-size:0.95rem; }
   .totals-row:not(:last-child) { border-bottom:1px solid #eee; }
   .totals-row .lbl { color:#555; }
   .totals-row .val { font-weight:600; }
   .totals-row.pending-row .val { color:#e67e22; }
   .totals-row.ret-row     .val { color:#e74c3c; }
   .totals-row.net-row { background:#27ae60; }
-  .totals-row.net-row .lbl, .totals-row.net-row .val { color:white; font-weight:700; font-size:0.88rem; }
+  .totals-row.net-row .lbl, .totals-row.net-row .val { color:white; font-weight:700; font-size:1rem; }
 
-  .inv-footer { margin-top:16px; padding-top:14px; border-top:1px solid #eee; font-size:0.72rem; color:#aaa; text-align:center; }
+  .inv-footer { margin-top:20px; padding-top:20px; border-top:1px solid #eee; font-size:0.8rem; color:#aaa; text-align:center; }
 
-  .print-bar { max-width:1060px; margin:0 auto 16px; display:flex; gap:10px; align-items:center; }
-  .print-bar .hint { font-size:0.8rem; color:#888; margin-left:8px; }
-  .btn-print { padding:8px 18px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.9rem; }
+  .print-bar { max-width:1400px; margin:0 auto 20px; display:flex; gap:10px; align-items:center; }
+  .print-bar .hint { font-size:0.9rem; color:#888; margin-left:8px; }
+  .btn-print { padding:10px 22px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; }
   .btn-print:hover { background:#5568d3; }
-  .btn-close { padding:8px 18px; background:#e74c3c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.9rem; }
+  .btn-close { padding:10px 22px; background:#e74c3c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; }
 
   @media print {
     @page { size: A4 landscape; margin: 10mm; }
-    body { background:white; padding:0; font-size:10px; }
-    .page { box-shadow:none; border-radius:0; padding:0; max-width:100%; }
+    body { background:white; padding:0; }
+    .page { box-shadow:none; border-radius:0; padding:20px; max-width:100%; }
     .print-bar { display:none; }
     .cobrado-input { display:none !important; }
     .cobrado-print { display:inline !important; }
     tr.fully-paid td, tr.has-pending td { background:white !important; }
-    table { font-size:9px; margin-bottom:12px; }
-    th { padding:5px 7px; }
-    td { padding:4px 7px; }
-    .cobrado-input { width:60px; }
-    .inv-header { margin-bottom:16px; padding-bottom:12px; }
-    .inv-clinic { font-size:1rem; }
-    .inv-num { font-size:1.1rem; }
-    .totals-area { gap:10px; }
-    .totals-box { min-width:220px; }
-    .totals-row { padding:5px 10px; font-size:9px; }
-    .inv-footer { margin-top:10px; padding-top:8px; font-size:8px; }
   }
 </style>
 </head>
@@ -1520,21 +1684,22 @@
   <div class="print-bar">
     <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
     <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
-    <span class="hint">Edita la columna <strong>Cobrado</strong> para registrar pagos parciales.</span>
+    <span class="hint">Edita <strong>Pac. cobrados</strong> para indicar cuántos pacientes ha pagado cada compañía.</span>
   </div>
   <div class="page">
     ${headerHtml}
     <div class="inv-title">Payment Order — ${monthLabel}</div>
-    <div class="inv-subtitle">Edita la columna "Cobrado" para reflejar los importes realmente recibidos de cada compañía.</div>
+    <div class="inv-subtitle">Edita la columna "Pac. cobrados" para indicar cuántos pacientes ha pagado ya cada compañía.</div>
     <table>
       <thead>
         <tr>
           <th>Categoría</th>
           <th class="num">Pacientes</th>
+          <th class="num">Pac. cobrados</th>
           <th class="num">Precio Unit.</th>
           <th class="num">Bruto esperado</th>
-          <th class="num">Cobrado (€)</th>
-          <th class="num">Pendiente</th>
+          <th class="num">Importe cobrado</th>
+          <th class="num">Pendiente (€)</th>
           <th class="num">% Clínica</th>
           <th class="num">Retención</th>
           <th class="num">Neto</th>
@@ -1594,44 +1759,46 @@
     function fmt(n) { return n.toFixed(2) + ' €'; }
 
     function recalc() {
-      let totalCobrado = 0, totalPending = 0, totalRet = 0, totalNet = 0;
+      let totalCobradoEur = 0, totalPending = 0, totalRet = 0, totalNet = 0;
+      let totalPacCobrados = 0, totalPacPendientes = 0;
 
       LINES.forEach((l, i) => {
-        const input    = document.getElementById('cobrado-' + i);
-        const cobrado  = Math.max(0, parseFloat(input.value) || 0);
-        const gross    = l.gross;
-        const pending  = Math.max(0, gross - cobrado);
-        const commPct  = l.commPct;
-        const ret      = cobrado * commPct / 100;
-        const net      = cobrado - ret;
+        const input      = document.getElementById('cobrado-' + i);
+        const pacCobrados = Math.min(l.count, Math.max(0, parseInt(input.value) || 0));
+        const pacPending  = l.count - pacCobrados;
+        const cobradoEur  = pacCobrados * l.price;
+        const pendingEur  = pacPending  * l.price;
+        const commPct     = l.commPct;
+        const ret         = cobradoEur * commPct / 100;
+        const net         = cobradoEur - ret;
 
         // Update print span
-        const span = input.nextElementSibling;
-        span.textContent = fmt(cobrado);
+        input.nextElementSibling.textContent = pacCobrados;
 
         // Style input
-        input.classList.toggle('full',    cobrado >= gross && gross > 0);
-        input.classList.toggle('partial', cobrado < gross  && cobrado > 0);
+        input.classList.toggle('full',    pacCobrados >= l.count && l.count > 0);
+        input.classList.toggle('partial', pacCobrados > 0 && pacCobrados < l.count);
 
         // Update cells
-        document.getElementById('pending-' + i).textContent = pending > 0.005 ? fmt(pending) : '—';
-        document.getElementById('ret-'     + i).textContent = ret > 0.005 ? '− ' + fmt(ret) : '—';
-        document.getElementById('net-'     + i).textContent = cobrado > 0 ? fmt(net) : '—';
+        document.getElementById('cobrado-eur-' + i).textContent = cobradoEur > 0 ? fmt(cobradoEur) : '—';
+        document.getElementById('pending-'     + i).textContent = pendingEur > 0 ? fmt(pendingEur) : '—';
+        document.getElementById('ret-'         + i).textContent = ret > 0.005 ? '− ' + fmt(ret) : '—';
+        document.getElementById('net-'         + i).textContent = cobradoEur > 0 ? fmt(net) : '—';
 
         // Row highlight
         const row = document.getElementById('row-' + i);
-        row.classList.toggle('fully-paid',  pending < 0.005 && gross > 0);
-        row.classList.toggle('has-pending', pending > 0.005);
+        row.classList.toggle('fully-paid',  pacPending === 0 && l.count > 0);
+        row.classList.toggle('has-pending', pacPending > 0);
 
-        totalCobrado += cobrado;
-        totalPending += pending;
-        totalRet     += ret;
-        totalNet     += net;
+        totalCobradoEur += cobradoEur;
+        totalPending    += pendingEur;
+        totalRet        += ret;
+        totalNet        += net;
       });
 
-      document.getElementById('t-cobrado').textContent = fmt(totalCobrado);
+      document.getElementById('t-cobrado').textContent = fmt(totalCobradoEur);
       document.getElementById('t-pending').textContent = totalPending > 0.005 ? fmt(totalPending) : '0.00 €';
-      document.getElementById('t-base').textContent    = fmt(totalCobrado);
+      document.getElementById('t-base').textContent    = fmt(totalCobradoEur);
       const tRet = document.getElementById('t-ret');
       if (tRet) tRet.textContent = '− ' + fmt(totalRet);
       document.getElementById('t-net').textContent     = fmt(totalNet);
@@ -1650,7 +1817,7 @@
 
         // ── Sample data ───────────────────────────────────────────────────────
 
-        const SAMPLE_DATA = {"version":2,"exportDate":"2026-04-03","entries":[{"date":"2026-01-06","category":"Adeslas","count":8},{"date":"2026-01-06","category":"Asisa","count":5},{"date":"2026-01-06","category":"DKV","count":3},{"date":"2026-01-06","category":"Mapfre","count":4},{"date":"2026-01-06","category":"Privado","count":2},{"date":"2026-01-07","category":"Adeslas","count":6},{"date":"2026-01-07","category":"AXA","count":4},{"date":"2026-01-07","category":"Sanitas","count":7},{"date":"2026-01-07","category":"Privado Efectivo","count":3},{"date":"2026-01-08","category":"Asisa","count":5},{"date":"2026-01-08","category":"Caser","count":2},{"date":"2026-01-08","category":"DKV Revision","count":1},{"date":"2026-01-08","category":"Mapfre","count":3},{"date":"2026-01-09","category":"Adeslas","count":9},{"date":"2026-01-09","category":"DKV","count":4},{"date":"2026-01-09","category":"Privado","count":5},{"date":"2026-01-10","category":"Asisa","count":3},{"date":"2026-01-10","category":"Sanitas","count":6},{"date":"2026-01-13","category":"Adeslas","count":7},{"date":"2026-01-13","category":"AXA","count":2},{"date":"2026-01-13","category":"Mapfre","count":5},{"date":"2026-01-14","category":"DKV","count":3},{"date":"2026-01-14","category":"Privado Efectivo","count":4},{"date":"2026-01-14","category":"Sanitas","count":8},{"date":"2026-01-15","category":"Adeslas","count":4},{"date":"2026-01-15","category":"Asisa","count":6},{"date":"2026-01-15","category":"Other","count":1},{"date":"2026-01-16","category":"Caser","count":3},{"date":"2026-01-16","category":"Mapfre","count":2},{"date":"2026-01-17","category":"Adeslas","count":5},{"date":"2026-01-17","category":"DKV","count":7},{"date":"2026-01-20","category":"Asisa","count":4},{"date":"2026-01-20","category":"Privado","count":3},{"date":"2026-01-21","category":"AXA","count":5},{"date":"2026-01-21","category":"Sanitas","count":6},{"date":"2026-01-22","category":"Adeslas","count":8},{"date":"2026-01-22","category":"DKV Revision","count":2},{"date":"2026-01-23","category":"Mapfre","count":4},{"date":"2026-01-23","category":"Privado Efectivo","count":3},{"date":"2026-01-24","category":"Asisa","count":5},{"date":"2026-01-24","category":"Caser","count":1},{"date":"2026-01-27","category":"Adeslas","count":6},{"date":"2026-01-27","category":"Sanitas","count":7},{"date":"2026-01-28","category":"DKV","count":4},{"date":"2026-01-28","category":"Privado","count":2},{"date":"2026-01-29","category":"AXA","count":3},{"date":"2026-01-29","category":"Mapfre","count":5},{"date":"2026-01-30","category":"Adeslas","count":9},{"date":"2026-01-30","category":"Asisa","count":4},{"date":"2026-01-31","category":"Sanitas","count":6},{"date":"2026-01-31","category":"Privado Efectivo","count":3},{"date":"2026-02-03","category":"Adeslas","count":7},{"date":"2026-02-03","category":"DKV","count":5},{"date":"2026-02-03","category":"Mapfre","count":3},{"date":"2026-02-04","category":"Asisa","count":6},{"date":"2026-02-04","category":"AXA","count":2},{"date":"2026-02-05","category":"Adeslas","count":8},{"date":"2026-02-05","category":"Sanitas","count":5},{"date":"2026-02-05","category":"Privado","count":4},{"date":"2026-02-06","category":"Caser","count":3},{"date":"2026-02-06","category":"DKV Revision","count":1},{"date":"2026-02-07","category":"Adeslas","count":5},{"date":"2026-02-07","category":"Mapfre","count":6},{"date":"2026-02-10","category":"Asisa","count":4},{"date":"2026-02-10","category":"Privado Efectivo","count":2},{"date":"2026-02-11","category":"DKV","count":7},{"date":"2026-02-11","category":"Sanitas","count":8},{"date":"2026-02-12","category":"Adeslas","count":6},{"date":"2026-02-12","category":"AXA","count":3},{"date":"2026-02-13","category":"Mapfre","count":5},{"date":"2026-02-13","category":"Other","count":2},{"date":"2026-02-14","category":"Asisa","count":7},{"date":"2026-02-14","category":"Caser","count":1},{"date":"2026-02-17","category":"Adeslas","count":9},{"date":"2026-02-17","category":"DKV","count":4},{"date":"2026-02-18","category":"Sanitas","count":6},{"date":"2026-02-18","category":"Privado","count":3},{"date":"2026-02-19","category":"Adeslas","count":5},{"date":"2026-02-19","category":"Mapfre","count":4},{"date":"2026-02-20","category":"AXA","count":2},{"date":"2026-02-20","category":"Privado Efectivo","count":5},{"date":"2026-02-21","category":"Asisa","count":8},{"date":"2026-02-21","category":"DKV Revision","count":3},{"date":"2026-02-24","category":"Adeslas","count":6},{"date":"2026-02-24","category":"Sanitas","count":7},{"date":"2026-02-25","category":"Caser","count":2},{"date":"2026-02-25","category":"Mapfre","count":4},{"date":"2026-02-26","category":"DKV","count":5},{"date":"2026-02-26","category":"Privado","count":3},{"date":"2026-02-27","category":"Adeslas","count":8},{"date":"2026-02-27","category":"Asisa","count":6},{"date":"2026-02-28","category":"AXA","count":4},{"date":"2026-02-28","category":"Sanitas","count":5},{"date":"2026-03-02","category":"Adeslas","count":7},{"date":"2026-03-02","category":"DKV","count":6},{"date":"2026-03-02","category":"Mapfre","count":3},{"date":"2026-03-03","category":"Asisa","count":5},{"date":"2026-03-03","category":"Privado Efectivo","count":4},{"date":"2026-03-04","category":"Adeslas","count":9},{"date":"2026-03-04","category":"Sanitas","count":7},{"date":"2026-03-04","category":"Caser","count":2},{"date":"2026-03-05","category":"AXA","count":3},{"date":"2026-03-05","category":"DKV Revision","count":1},{"date":"2026-03-06","category":"Adeslas","count":6},{"date":"2026-03-06","category":"Mapfre","count":5},{"date":"2026-03-09","category":"Asisa","count":8},{"date":"2026-03-09","category":"Privado","count":4},{"date":"2026-03-10","category":"DKV","count":7},{"date":"2026-03-10","category":"Sanitas","count":6},{"date":"2026-03-11","category":"Adeslas","count":5},{"date":"2026-03-11","category":"AXA","count":4},{"date":"2026-03-12","category":"Mapfre","count":3},{"date":"2026-03-12","category":"Other","count":2},{"date":"2026-03-13","category":"Asisa","count":6},{"date":"2026-03-13","category":"Caser","count":1},{"date":"2026-03-16","category":"Adeslas","count":8},{"date":"2026-03-16","category":"DKV","count":5},{"date":"2026-03-17","category":"Sanitas","count":9},{"date":"2026-03-17","category":"Privado Efectivo","count":3},{"date":"2026-03-18","category":"Adeslas","count":7},{"date":"2026-03-18","category":"Mapfre","count":4},{"date":"2026-03-19","category":"AXA","count":2},{"date":"2026-03-19","category":"DKV Revision","count":3},{"date":"2026-03-20","category":"Asisa","count":5},{"date":"2026-03-20","category":"Privado","count":4},{"date":"2026-03-23","category":"Adeslas","count":6},{"date":"2026-03-23","category":"Sanitas","count":7},{"date":"2026-03-24","category":"Caser","count":2},{"date":"2026-03-24","category":"Mapfre","count":5},{"date":"2026-03-25","category":"DKV","count":4},{"date":"2026-03-25","category":"Privado Efectivo","count":3},{"date":"2026-03-26","category":"Adeslas","count":8},{"date":"2026-03-26","category":"Asisa","count":6},{"date":"2026-03-27","category":"AXA","count":3},{"date":"2026-03-27","category":"Sanitas","count":5},{"date":"2026-03-30","category":"Adeslas","count":7},{"date":"2026-03-30","category":"Mapfre","count":4},{"date":"2026-03-31","category":"DKV","count":6},{"date":"2026-03-31","category":"Privado","count":2}],"prices":{"Adeslas":11,"Asisa":12,"AXA":13,"Caser":14,"DKV":15,"DKV Revision":16,"Mapfre":17,"Privado":18,"Privado Efectivo":19,"Sanitas":20,"Other":100},"commissions":{"_default":25},"clinicInfo":{"name":"Centro MédicoCcontigo","doctor":"Beatriz Jiménez Canet","nif":"nif","phone":"telefono","address":"Dirección"}};
+        const SAMPLE_DATA = {"version":2,"exportDate":"2026-04-03","entries":[{"date":"2026-01-06","category":"Adeslas","count":8},{"date":"2026-01-06","category":"DKV","count":3},{"date":"2026-01-06","category":"Mapfre","count":4},{"date":"2026-01-06","category":"Privado Efectivo","count":2},{"date":"2026-01-07","category":"Adeslas Revisión","count":5},{"date":"2026-01-07","category":"AXA","count":4},{"date":"2026-01-07","category":"DKV Famedic","count":3},{"date":"2026-01-07","category":"Privado Tarjeta","count":2},{"date":"2026-01-08","category":"Adeslas Funcionarios","count":6},{"date":"2026-01-08","category":"DKV Revisión","count":2},{"date":"2026-01-08","category":"Mapfre Revisión","count":3},{"date":"2026-01-08","category":"Vacunas","count":5},{"date":"2026-01-09","category":"Adeslas","count":9},{"date":"2026-01-09","category":"DKV","count":4},{"date":"2026-01-09","category":"AXA Revisión","count":2},{"date":"2026-01-10","category":"Adeslas Revisión","count":3},{"date":"2026-01-10","category":"DKV Famedic Revisión","count":2},{"date":"2026-01-10","category":"Mapfre","count":5},{"date":"2026-01-13","category":"Adeslas","count":7},{"date":"2026-01-13","category":"AXA","count":3},{"date":"2026-01-13","category":"Mapfre Revisión","count":2},{"date":"2026-01-14","category":"DKV","count":5},{"date":"2026-01-14","category":"Privado Tarjeta","count":4},{"date":"2026-01-14","category":"Adeslas Funcionarios","count":3},{"date":"2026-01-15","category":"Adeslas","count":6},{"date":"2026-01-15","category":"DKV Famedic","count":4},{"date":"2026-01-15","category":"Vacunas","count":8},{"date":"2026-01-16","category":"Mapfre","count":3},{"date":"2026-01-16","category":"AXA Revisión","count":2},{"date":"2026-01-16","category":"Privado Efectivo","count":3},{"date":"2026-01-17","category":"Adeslas","count":5},{"date":"2026-01-17","category":"DKV","count":7},{"date":"2026-01-20","category":"Adeslas Revisión","count":4},{"date":"2026-01-20","category":"Privado Efectivo","count":3},{"date":"2026-01-21","category":"AXA","count":5},{"date":"2026-01-21","category":"DKV Famedic Revisión","count":3},{"date":"2026-01-21","category":"Mapfre","count":4},{"date":"2026-01-22","category":"Adeslas","count":8},{"date":"2026-01-22","category":"DKV Revisión","count":2},{"date":"2026-01-22","category":"Vacunas","count":6},{"date":"2026-01-23","category":"Mapfre Revisión","count":3},{"date":"2026-01-23","category":"Privado Tarjeta","count":4},{"date":"2026-01-24","category":"Adeslas Funcionarios","count":5},{"date":"2026-01-24","category":"DKV Famedic","count":3},{"date":"2026-01-27","category":"Adeslas","count":6},{"date":"2026-01-27","category":"AXA","count":4},{"date":"2026-01-28","category":"DKV","count":5},{"date":"2026-01-28","category":"Privado Efectivo","count":2},{"date":"2026-01-29","category":"Adeslas Revisión","count":4},{"date":"2026-01-29","category":"Mapfre","count":5},{"date":"2026-01-30","category":"Adeslas","count":9},{"date":"2026-01-30","category":"DKV Famedic Revisión","count":2},{"date":"2026-01-31","category":"AXA Revisión","count":3},{"date":"2026-01-31","category":"Privado Tarjeta","count":4},{"date":"2026-02-03","category":"Adeslas","count":7},{"date":"2026-02-03","category":"DKV","count":5},{"date":"2026-02-03","category":"Mapfre","count":3},{"date":"2026-02-04","category":"Adeslas Revisión","count":4},{"date":"2026-02-04","category":"AXA","count":3},{"date":"2026-02-05","category":"Adeslas Funcionarios","count":6},{"date":"2026-02-05","category":"DKV Famedic","count":4},{"date":"2026-02-05","category":"Vacunas","count":7},{"date":"2026-02-06","category":"Mapfre Revisión","count":2},{"date":"2026-02-06","category":"DKV Revisión","count":3},{"date":"2026-02-07","category":"Adeslas","count":8},{"date":"2026-02-07","category":"Privado Efectivo","count":5},{"date":"2026-02-10","category":"DKV","count":6},{"date":"2026-02-10","category":"Privado Tarjeta","count":3},{"date":"2026-02-11","category":"Adeslas Revisión","count":5},{"date":"2026-02-11","category":"AXA Revisión","count":2},{"date":"2026-02-11","category":"Mapfre","count":6},{"date":"2026-02-12","category":"Adeslas","count":7},{"date":"2026-02-12","category":"DKV Famedic Revisión","count":2},{"date":"2026-02-13","category":"Mapfre Revisión","count":4},{"date":"2026-02-13","category":"Vacunas","count":9},{"date":"2026-02-14","category":"Adeslas Funcionarios","count":4},{"date":"2026-02-14","category":"DKV Famedic","count":3},{"date":"2026-02-17","category":"Adeslas","count":9},{"date":"2026-02-17","category":"DKV","count":4},{"date":"2026-02-18","category":"AXA","count":5},{"date":"2026-02-18","category":"Privado Efectivo","count":3},{"date":"2026-02-19","category":"Adeslas Revisión","count":5},{"date":"2026-02-19","category":"Mapfre","count":4},{"date":"2026-02-20","category":"DKV Revisión","count":2},{"date":"2026-02-20","category":"Privado Tarjeta","count":4},{"date":"2026-02-21","category":"Adeslas","count":6},{"date":"2026-02-21","category":"DKV Famedic Revisión","count":3},{"date":"2026-02-24","category":"Adeslas Funcionarios","count":5},{"date":"2026-02-24","category":"AXA Revisión","count":2},{"date":"2026-02-25","category":"Mapfre Revisión","count":3},{"date":"2026-02-25","category":"DKV Famedic","count":4},{"date":"2026-02-26","category":"Adeslas","count":8},{"date":"2026-02-26","category":"DKV","count":5},{"date":"2026-02-27","category":"Privado Efectivo","count":4},{"date":"2026-02-27","category":"Vacunas","count":6},{"date":"2026-02-28","category":"AXA","count":3},{"date":"2026-02-28","category":"Mapfre","count":5},{"date":"2026-03-02","category":"Adeslas","count":7},{"date":"2026-03-02","category":"DKV","count":6},{"date":"2026-03-02","category":"Mapfre Revisión","count":2},{"date":"2026-03-03","category":"Adeslas Revisión","count":4},{"date":"2026-03-03","category":"DKV Famedic","count":3},{"date":"2026-03-04","category":"Adeslas","count":9},{"date":"2026-03-04","category":"AXA","count":4},{"date":"2026-03-04","category":"Vacunas","count":7},{"date":"2026-03-05","category":"Adeslas Funcionarios","count":5},{"date":"2026-03-05","category":"DKV Revisión","count":2},{"date":"2026-03-06","category":"Adeslas","count":6},{"date":"2026-03-06","category":"Mapfre","count":5},{"date":"2026-03-09","category":"DKV Famedic Revisión","count":3},{"date":"2026-03-09","category":"Privado Tarjeta","count":4},{"date":"2026-03-10","category":"Adeslas Revisión","count":5},{"date":"2026-03-10","category":"DKV","count":7},{"date":"2026-03-11","category":"AXA Revisión","count":3},{"date":"2026-03-11","category":"Privado Efectivo","count":4},{"date":"2026-03-12","category":"Adeslas","count":8},{"date":"2026-03-12","category":"Mapfre Revisión","count":3},{"date":"2026-03-13","category":"DKV Famedic","count":4},{"date":"2026-03-13","category":"Vacunas","count":5},{"date":"2026-03-16","category":"Adeslas","count":8},{"date":"2026-03-16","category":"DKV","count":5},{"date":"2026-03-17","category":"Adeslas Funcionarios","count":4},{"date":"2026-03-17","category":"Privado Tarjeta","count":3},{"date":"2026-03-18","category":"Adeslas Revisión","count":6},{"date":"2026-03-18","category":"Mapfre","count":4},{"date":"2026-03-19","category":"AXA","count":3},{"date":"2026-03-19","category":"DKV Revisión","count":2},{"date":"2026-03-20","category":"Adeslas","count":7},{"date":"2026-03-20","category":"Privado Efectivo","count":4},{"date":"2026-03-23","category":"DKV Famedic Revisión","count":2},{"date":"2026-03-23","category":"Mapfre Revisión","count":3},{"date":"2026-03-24","category":"Adeslas","count":6},{"date":"2026-03-24","category":"AXA Revisión","count":2},{"date":"2026-03-25","category":"DKV Famedic","count":4},{"date":"2026-03-25","category":"Privado Tarjeta","count":3},{"date":"2026-03-26","category":"Adeslas Revisión","count":5},{"date":"2026-03-26","category":"Mapfre","count":4},{"date":"2026-03-27","category":"Adeslas Funcionarios","count":3},{"date":"2026-03-27","category":"Vacunas","count":8},{"date":"2026-03-30","category":"Adeslas","count":7},{"date":"2026-03-30","category":"DKV","count":4},{"date":"2026-03-31","category":"AXA","count":3},{"date":"2026-03-31","category":"Privado Efectivo","count":2}],"prices":{"Adeslas":18,"Adeslas Revisión":12,"Adeslas Funcionarios":18,"DKV":17,"DKV Revisión":11,"DKV Famedic":17,"DKV Famedic Revisión":11,"Mapfre":19,"Mapfre Revisión":13,"AXA":20,"AXA Revisión":14,"Privado Efectivo":45,"Privado Tarjeta":40,"Vacunas":25},"commissions":{"_default":25},"clinicInfo":{"name":"Centro Médico Contigo","doctor":"Beatriz Jiménez Canet","nif":"12345678A","phone":"612 345 678","address":"Calle Mayor 1, 28001 Madrid"}};
 
         function loadSampleData() {
             const mode = document.querySelector('input[name="importMode"]:checked').value;
