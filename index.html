@@ -178,7 +178,23 @@
 
         /* Charts */
         .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; }
-        .chart-wrapper { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); height: 360px; border: 1px solid #f1f5f9;}
+        .chart-wrapper { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
+        .chart-canvas-wrap { position: relative; height: 300px; }
+        .chart-wrapper-full .chart-canvas-wrap { height: 240px; }
+
+        /* Custom chart legend */
+        .chart-legend { display: flex; flex-wrap: wrap; gap: 5px; padding-top: 12px; }
+        .legend-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 10px 5px 7px; border-radius: 20px;
+            border: 1.5px solid rgba(0,0,0,0.08); cursor: pointer;
+            font-size: 0.78rem; font-weight: 500; background: white;
+            color: #444; white-space: nowrap; transition: opacity 0.15s, filter 0.15s;
+            min-height: 32px; /* touch target */
+        }
+        .legend-pill:hover { filter: brightness(0.93); }
+        .legend-pill.hidden { opacity: 0.35; text-decoration: line-through; }
+        .legend-pill .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
 
         /* Elements */
         .day-total {
@@ -323,7 +339,8 @@
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .chart-wrapper { height: 380px; }
+            .chart-canvas-wrap { height: 320px; }
+            .chart-wrapper-full .chart-canvas-wrap { height: 260px; }
         }
 
         /* ≥ 1536px — 1080p wide */
@@ -335,7 +352,8 @@
             }
 
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
-            .chart-wrapper { height: 400px; }
+            .chart-canvas-wrap { height: 340px; }
+            .chart-wrapper-full .chart-canvas-wrap { height: 280px; }
             .card { padding: 40px 48px; }
         }
 
@@ -441,14 +459,22 @@
                 </div>
                 <div class="stats-grid" id="statsCards"></div>
                 <div class="charts-container">
-                    <div class="chart-wrapper"><canvas id="pieChart"></canvas></div>
-                    <div class="chart-wrapper"><canvas id="barChart"></canvas></div>
+                    <div class="chart-wrapper">
+                        <div class="chart-canvas-wrap"><canvas id="pieChart"></canvas></div>
+                        <div class="chart-legend" id="legend-pieChart"></div>
+                    </div>
+                    <div class="chart-wrapper">
+                        <div class="chart-canvas-wrap"><canvas id="barChart"></canvas></div>
+                        <div class="chart-legend" id="legend-barChart"></div>
+                    </div>
                 </div>
-                <div class="chart-wrapper-full" style="height:300px;">
-                    <canvas id="lineChart"></canvas>
+                <div class="chart-wrapper-full">
+                    <div class="chart-canvas-wrap"><canvas id="lineChart"></canvas></div>
+                    <div class="chart-legend" id="legend-lineChart"></div>
                 </div>
-                <div class="chart-wrapper-full" style="height:340px;">
-                    <canvas id="annualChart"></canvas>
+                <div class="chart-wrapper-full">
+                    <div class="chart-canvas-wrap"><canvas id="annualChart"></canvas></div>
+                    <div class="chart-legend" id="legend-annualChart"></div>
                 </div>
             </div>
         </div>
@@ -647,6 +673,31 @@
         ];
 
         let pieChart, barChart, lineChart, annualChart;
+        const chartMap = {};
+
+        function renderLegend(chart, containerId) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.innerHTML = chart.data.datasets.map((ds, i) => {
+                const col = ds.borderColor && ds.type === 'line'
+                    ? ds.borderColor
+                    : (Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i % ds.backgroundColor.length] : ds.backgroundColor);
+                const vis = chart.isDatasetVisible(i);
+                return `<button class="legend-pill${vis ? '' : ' hidden'}"
+                    onclick="toggleDataset('${chart.canvas.id}',${i})"
+                    style="border-color:${col}20; background:${col}12;">
+                    <span class="swatch" style="background:${col};"></span>${ds.label}
+                </button>`;
+            }).join('');
+        }
+
+        function toggleDataset(canvasId, idx) {
+            const c = chartMap[canvasId];
+            if (!c) return;
+            c.setDatasetVisibility(idx, !c.isDatasetVisible(idx));
+            c.update();
+            renderLegend(c, 'legend-' + canvasId);
+        }
 
         // ── Utility helpers ───────────────────────────────────────────────────
 
@@ -969,9 +1020,14 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { title: { display: true, text: 'Distribución por Categoría' } }
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Distribución por Categoría' }
+                    }
                 }
             });
+            chartMap['pieChart'] = pieChart;
+            renderLegend(pieChart, 'legend-pieChart');
 
             // Bar + line: patients and income per category
             const catIncome = CATEGORIES.map(cat => (data[cat] || 0) * (prices[cat] || 0));
@@ -999,6 +1055,7 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
+                        legend: { display: false },
                         title: { display: true, text: 'Pacientes por Categoría' },
                         tooltip: {
                             mode: 'index',
@@ -1029,6 +1086,8 @@
                     }
                 }
             });
+            chartMap['barChart'] = barChart;
+            renderLegend(barChart, 'legend-barChart');
 
             // Stacked bar + income line: breakdown by category per day of month
             const sortedDays = [...new Set(entries.map(e => e.date.slice(-2)))]
@@ -1078,6 +1137,7 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
+                        legend: { display: false },
                         title: { display: true, text: 'Pacientes e Ingresos por Día del Mes' },
                         tooltip: {
                             mode: 'index',
@@ -1122,6 +1182,8 @@
                     }
                 }
             });
+            chartMap['lineChart'] = lineChart;
+            renderLegend(lineChart, 'legend-lineChart');
         }
 
         function updateAnnualChart(endMonth) {
@@ -1169,6 +1231,7 @@
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
+                        legend: { display: false },
                         title: { display: true, text: 'Resumen Anual — Pacientes e Ingresos (últimos 12 meses)' },
                         tooltip: {
                             mode: 'index',
@@ -1202,6 +1265,8 @@
                     }
                 }
             });
+            chartMap['annualChart'] = annualChart;
+            renderLegend(annualChart, 'legend-annualChart');
         }
 
         // ── History ───────────────────────────────────────────────────────────
