@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "exportDate": "2026-04-02",
+  "exportDate": "2026-04-03",
   "recordCount": 139,
   "entries": [
     {
@@ -711,5 +711,15 @@
     "Privado Efectivo": 19,
     "Sanitas": 20,
     "Other": 100
+  },
+  "commissions": {
+    "_default": 25
+  },
+  "clinicInfo": {
+    "name": "Centro MédicoCcontigo",
+    "doctor": "Beatriz Jiménez Canet",
+    "nif": "nif",
+    "phone": "telefono",
+    "address": "Dirección"
   }
 }
