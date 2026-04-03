@@ -395,6 +395,7 @@
                         <select id="statsMonthSelect" onchange="updateStats()"></select>
                         <button class="btn btn-success" onclick="exportToCSV()">📊 CSV Mensual</button>
                         <button class="btn btn-purple"  onclick="exportAnnualToCSV()">📊 CSV Anual</button>
+                        <button class="btn" style="background:#2c3e50;" onclick="generateInvoice()">🧾 Payment Order</button>
                     </div>
                 </div>
                 <div class="stats-grid" id="statsCards"></div>
@@ -500,23 +501,65 @@
         <!-- ── Configuration ─────────────────────────────────────────────── -->
         <div id="config-tab" style="display:none;">
             <div class="card">
-                <h2>Configuración de Precios por Categoría</h2>
+                <h2>Datos de la Clínica</h2>
                 <div class="info-box">
-                    Define el precio por paciente en cada categoría.
-                    Se usa para calcular los ingresos estimados en las estadísticas.
-                    Los precios se guardan junto con tus datos al exportar.
+                    Esta información aparecerá en el encabezado de las facturas generadas.
                 </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Nombre / Clínica</label>
+                        <input type="text" id="clinicName" placeholder="Ej: Clínica Ejemplo" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Médico / Profesional</label>
+                        <input type="text" id="clinicDoctor" placeholder="Ej: Dr. García López" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">NIF / CIF</label>
+                        <input type="text" id="clinicNif" placeholder="Ej: 12345678A" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Teléfono</label>
+                        <input type="text" id="clinicPhone" placeholder="Ej: 612 345 678" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <label style="display:block; font-size:0.9rem; color:#555; margin-bottom:4px;">Dirección</label>
+                        <input type="text" id="clinicAddress" placeholder="Ej: Calle Mayor 1, 28001 Madrid" style="width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                    </div>
+                </div>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding-bottom:20px; border-bottom:1px solid #eee; margin-bottom:20px;">
+                    <button class="btn btn-success" onclick="saveClinicInfo()">💾 Guardar Datos</button>
+                    <span id="clinicSaveMsg" class="save-msg" style="display:none;"></span>
+                </div>
+
+                <h2>Precios y Comisiones por Categoría</h2>
+                <div class="info-box">
+                    Define el precio por paciente y el porcentaje que retiene la clínica en cada categoría.
+                    La columna <strong>% Clínica</strong> es opcional: si se deja vacía se aplica el porcentaje general.
+                </div>
+
+                <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px; flex-wrap:wrap;">
+                    <label style="font-weight:600; color:#444;">% general de la clínica:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="number" id="defaultCommission" min="0" max="100" step="0.1"
+                               placeholder="Ej: 30" style="width:110px; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:1rem;">
+                        <span style="color:#666;">%</span>
+                    </div>
+                    <span style="font-size:0.85rem; color:#888;">(se aplica a todas las categorías que no tengan % específico)</span>
+                </div>
+
                 <table>
                     <thead>
                         <tr>
                             <th>Categoría</th>
-                            <th style="width:180px;">Precio por paciente (€)</th>
+                            <th style="width:160px;">Precio Unit. (€)</th>
+                            <th style="width:170px;">% Clínica <span style="font-weight:400; font-size:0.8rem;">(vacío = general)</span></th>
                         </tr>
                     </thead>
                     <tbody id="configTableBody"></tbody>
                 </table>
                 <div style="margin-top:15px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                    <button class="btn btn-success" onclick="savePrices()">💾 Guardar Precios</button>
+                    <button class="btn btn-success" onclick="savePrices()">💾 Guardar Precios y Comisiones</button>
                     <span id="pricesSaveMsg" class="save-msg" style="display:none;"></span>
                 </div>
             </div>
@@ -1185,7 +1228,9 @@
                 exportDate: today,
                 recordCount: entries.length,
                 entries: entries.map(({ date, category, count }) => ({ date, category, count })),
-                prices
+                prices,
+                commissions: getCommissions(),
+                clinicInfo: getClinicInfo()
             };
             downloadFile(
                 JSON.stringify(backup, null, 2),
@@ -1278,13 +1323,17 @@
                     const mode   = document.querySelector('input[name="importMode"]:checked').value;
 
                     // Support v1 (plain array) and v2 (object with metadata)
-                    let importedEntries, importedPrices;
+                    let importedEntries, importedPrices, importedCommissions, importedClinicInfo;
                     if (Array.isArray(parsed)) {
-                        importedEntries = parsed;
-                        importedPrices  = null;
+                        importedEntries      = parsed;
+                        importedPrices       = null;
+                        importedCommissions  = null;
+                        importedClinicInfo   = null;
                     } else if (parsed.entries && Array.isArray(parsed.entries)) {
-                        importedEntries = parsed.entries;
-                        importedPrices  = parsed.prices || null;
+                        importedEntries      = parsed.entries;
+                        importedPrices       = parsed.prices       || null;
+                        importedCommissions  = parsed.commissions  || null;
+                        importedClinicInfo   = parsed.clinicInfo   || null;
                     } else {
                         toast('Formato de archivo no reconocido', 'error', 5000);
                         return;
@@ -1305,14 +1354,16 @@
                     if (mode === 'replace') {
                         const newEntries = valid.map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
                         saveEntries(newEntries);
-                        if (importedPrices) savePricesToStorage(importedPrices);
+                        if (importedPrices)      savePricesToStorage(importedPrices);
+                        if (importedCommissions) localStorage.setItem('clinicCommissions', JSON.stringify(importedCommissions));
+                        if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify(importedClinicInfo));
                         toast(
-                            `Datos reemplazados: ${newEntries.length} registros${importedPrices ? ' + precios' : ''} importados`,
+                            `Datos reemplazados: ${newEntries.length} registros importados`,
                             'success', 5000
                         );
                     } else {
                         // Merge: skip entries that already exist (same date + category)
-                        const current     = getEntries();
+                        const current      = getEntries();
                         const existingKeys = new Set(current.map(e => `${e.date}|${e.category}`));
                         const toAdd = valid
                             .filter(e => !existingKeys.has(`${e.date}|${e.category}`))
@@ -1320,16 +1371,15 @@
 
                         saveEntries([...current, ...toAdd]);
 
-                        // Merge prices: current values take priority
-                        if (importedPrices) {
-                            savePricesToStorage({ ...importedPrices, ...getPrices() });
-                        }
+                        // Merge: current values take priority over imported
+                        if (importedPrices)      savePricesToStorage({ ...importedPrices, ...getPrices() });
+                        if (importedCommissions) localStorage.setItem('clinicCommissions', JSON.stringify({ ...importedCommissions, ...getCommissions() }));
+                        if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify({ ...importedClinicInfo, ...getClinicInfo() }));
 
                         const skipped = valid.length - toAdd.length;
                         toast(
                             `Añadidos ${toAdd.length} registros` +
-                            (skipped  > 0 ? `, ${skipped} duplicados omitidos` : '') +
-                            (importedPrices ? ' + precios combinados' : ''),
+                            (skipped > 0 ? `, ${skipped} duplicados omitidos` : ''),
                             'success', 5000
                         );
                     }
@@ -1369,10 +1419,246 @@
             }
         }
 
+        // ── Clinic info ───────────────────────────────────────────────────────
+
+        function getClinicInfo() {
+            return JSON.parse(localStorage.getItem('clinicInfo') || '{}');
+        }
+
+        function loadClinicInfo() {
+            const info = getClinicInfo();
+            ['Name','Doctor','Nif','Phone','Address'].forEach(field => {
+                const el = document.getElementById(`clinic${field}`);
+                if (el) el.value = info[field.toLowerCase()] || '';
+            });
+        }
+
+        function saveClinicInfo() {
+            const info = {
+                name:    document.getElementById('clinicName').value.trim(),
+                doctor:  document.getElementById('clinicDoctor').value.trim(),
+                nif:     document.getElementById('clinicNif').value.trim(),
+                phone:   document.getElementById('clinicPhone').value.trim(),
+                address: document.getElementById('clinicAddress').value.trim()
+            };
+            localStorage.setItem('clinicInfo', JSON.stringify(info));
+            showInlineMsg('clinicSaveMsg', '✓ Datos guardados', 4000);
+            toast('Datos de la clínica guardados', 'success');
+        }
+
+        // ── Payment Order ─────────────────────────────────────────────────────
+
+        function generateInvoice() {
+            const sel         = document.getElementById('statsMonthSelect');
+            const month       = (sel && sel.value) ? sel.value : getCurrentMonth();
+            const { data }    = getMonthData(month);
+            const prices      = getPrices();
+            const commissions = getCommissions();
+            const info        = getClinicInfo();
+
+            // Build line items (only categories with patients)
+            const lines = CATEGORIES
+                .filter(cat => (data[cat] || 0) > 0)
+                .map(cat => {
+                    const count      = data[cat];
+                    const price      = prices[cat] || 0;
+                    const gross      = count * price;
+                    const commPct    = effectiveCommission(cat, commissions);
+                    const retention  = gross * commPct / 100;
+                    const net        = gross - retention;
+                    return { cat, count, price, commPct, gross, retention, net };
+                });
+
+            const totalPatients = lines.reduce((s, l) => s + l.count,     0);
+            const totalGross    = lines.reduce((s, l) => s + l.gross,      0);
+            const totalRet      = lines.reduce((s, l) => s + l.retention,  0);
+            const totalNet      = lines.reduce((s, l) => s + l.net,        0);
+
+            const monthLabel    = formatMonth(month);
+            const today         = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+            const orderNum      = `PO-${month.replace('-', '')}`;
+            const hasPrices     = lines.some(l => l.price > 0);
+            const hasComm       = lines.some(l => l.commPct > 0);
+
+            const defaultCommPct = commissions['_default'];
+            const commNote = defaultCommPct !== undefined
+                ? `% general clínica: ${defaultCommPct}%`
+                : '';
+
+            const headerHtml = `
+                <div class="inv-header">
+                    <div class="inv-from">
+                        <div class="inv-clinic">${info.name || 'Clínica'}</div>
+                        ${info.doctor  ? `<div>${info.doctor}</div>`  : ''}
+                        ${info.nif     ? `<div>NIF: ${info.nif}</div>` : ''}
+                        ${info.address ? `<div>${info.address}</div>` : ''}
+                        ${info.phone   ? `<div>Tel: ${info.phone}</div>` : ''}
+                    </div>
+                    <div class="inv-meta">
+                        <div class="inv-num">${orderNum}</div>
+                        <div class="inv-date">Emitida: ${today}</div>
+                        <div class="inv-period">Período: ${monthLabel}</div>
+                        ${commNote ? `<div class="inv-comm-note">${commNote}</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            const rowsHtml = lines.map(l => `
+                <tr>
+                    <td>${l.cat}</td>
+                    <td class="num">${l.count}</td>
+                    <td class="num">${l.price > 0 ? l.price.toFixed(2) + ' €' : '—'}</td>
+                    <td class="num gross">${l.gross > 0 ? l.gross.toFixed(2) + ' €' : '—'}</td>
+                    <td class="num">${l.commPct > 0 ? l.commPct + ' %' : '—'}</td>
+                    <td class="num ret">${l.retention > 0 ? '− ' + l.retention.toFixed(2) + ' €' : '—'}</td>
+                    <td class="num net">${l.net > 0 ? l.net.toFixed(2) + ' €' : (l.gross > 0 ? l.gross.toFixed(2) + ' €' : '—')}</td>
+                </tr>
+            `).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Payment Order ${orderNum}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
+  body { background:#f4f6fb; padding:30px; color:#222; }
+  .page { background:white; max-width:960px; margin:0 auto; padding:50px 50px 40px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
+
+  /* Header */
+  .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; padding-bottom:24px; border-bottom:3px solid #667eea; }
+  .inv-from { line-height:1.7; font-size:0.95rem; color:#444; }
+  .inv-clinic { font-size:1.5rem; font-weight:700; color:#222; margin-bottom:4px; }
+  .inv-meta { text-align:right; }
+  .inv-num { font-size:1.8rem; font-weight:700; color:#667eea; }
+  .inv-date, .inv-period { font-size:0.9rem; color:#666; margin-top:4px; }
+  .inv-comm-note { font-size:0.85rem; color:#764ba2; margin-top:6px; font-weight:600; }
+
+  /* Title */
+  .inv-title { font-size:1.1rem; font-weight:600; color:#555; margin-bottom:20px; letter-spacing:0.5px; text-transform:uppercase; }
+
+  /* Table */
+  table { width:100%; border-collapse:collapse; margin-bottom:30px; font-size:0.9rem; }
+  thead tr { background:#667eea; color:white; }
+  th { padding:11px 14px; text-align:left; font-weight:600; }
+  th.num { text-align:right; }
+  td { padding:10px 14px; border-bottom:1px solid #eee; }
+  td.num { text-align:right; }
+  td.gross { color:#2c3e50; }
+  td.ret   { color:#e74c3c; font-size:0.88rem; }
+  td.net   { color:#27ae60; font-weight:700; }
+  tbody tr:hover { background:#f8f9ff; }
+
+  /* Totals */
+  .totals { display:flex; justify-content:flex-end; margin-bottom:30px; }
+  .totals-box { width:360px; border:2px solid #eee; border-radius:10px; overflow:hidden; }
+  .totals-row { display:flex; justify-content:space-between; padding:10px 16px; font-size:0.95rem; }
+  .totals-row:not(:last-child) { border-bottom:1px solid #eee; }
+  .totals-row .lbl { color:#555; }
+  .totals-row .val { font-weight:600; }
+  .totals-row.ret-row .val { color:#e74c3c; }
+  .totals-row.net-row { background:#27ae60; color:white; font-weight:700; font-size:1.05rem; }
+  .totals-row.net-row .lbl, .totals-row.net-row .val { color:white; }
+
+  /* Footer */
+  .inv-footer { margin-top:20px; padding-top:20px; border-top:1px solid #eee; font-size:0.8rem; color:#aaa; text-align:center; }
+
+  /* Print bar */
+  .print-bar { max-width:960px; margin:0 auto 20px; display:flex; gap:10px; }
+  .btn-print { padding:10px 22px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; }
+  .btn-print:hover { background:#5568d3; }
+  .btn-close { padding:10px 22px; background:#e74c3c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; }
+
+  @media print {
+    body { background:white; padding:0; }
+    .page { box-shadow:none; border-radius:0; padding:30px; }
+    .print-bar { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div class="print-bar">
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
+  </div>
+  <div class="page">
+    ${headerHtml}
+    <div class="inv-title">Payment Order — ${monthLabel}</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Categoría</th>
+          <th class="num">Pacientes</th>
+          <th class="num">Precio Unit.</th>
+          <th class="num">Bruto</th>
+          <th class="num">% Clínica</th>
+          <th class="num">Retención</th>
+          <th class="num">Neto</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="totals">
+      <div class="totals-box">
+        <div class="totals-row">
+          <span class="lbl">Total pacientes</span>
+          <span class="val">${totalPatients}</span>
+        </div>
+        ${hasPrices ? `
+        <div class="totals-row">
+          <span class="lbl">Bruto total</span>
+          <span class="val">${totalGross.toFixed(2)} €</span>
+        </div>` : ''}
+        ${hasComm ? `
+        <div class="totals-row ret-row">
+          <span class="lbl">Retención clínica</span>
+          <span class="val">− ${totalRet.toFixed(2)} €</span>
+        </div>
+        <div class="totals-row net-row">
+          <span class="lbl">NETO A PERCIBIR</span>
+          <span class="val">${totalNet.toFixed(2)} €</span>
+        </div>` : (hasPrices ? `
+        <div class="totals-row net-row">
+          <span class="lbl">TOTAL</span>
+          <span class="val">${totalGross.toFixed(2)} €</span>
+        </div>` : '')}
+      </div>
+    </div>
+    <div class="inv-footer">
+      Documento generado el ${today} · ${info.name || ''} ${info.nif ? '· NIF ' + info.nif : ''}
+    </div>
+  </div>
+</body>
+</html>`;
+
+            const w = window.open('', '_blank');
+            w.document.write(html);
+            w.document.close();
+        }
+
+        // ── Commissions ───────────────────────────────────────────────────────
+
+        function getCommissions() {
+            return JSON.parse(localStorage.getItem('clinicCommissions') || '{}');
+        }
+
+        /** Returns the effective commission % for a category (0-100). */
+        function effectiveCommission(cat, commissions) {
+            if (commissions[cat] !== undefined) return commissions[cat];
+            if (commissions['_default'] !== undefined) return commissions['_default'];
+            return 0;
+        }
+
         // ── Prices / Config ───────────────────────────────────────────────────
 
         function loadPrices() {
-            const prices = getPrices();
+            loadClinicInfo();
+            const prices      = getPrices();
+            const commissions = getCommissions();
+
+            const defVal = commissions['_default'] !== undefined ? commissions['_default'] : '';
+            document.getElementById('defaultCommission').value = defVal;
+
             document.getElementById('configTableBody').innerHTML = CATEGORIES.map(cat => `
                 <tr class="category-row">
                     <td>${cat}</td>
@@ -1382,19 +1668,35 @@
                                value="${prices[cat] || ''}"
                                placeholder="0.00">
                     </td>
+                    <td>
+                        <input type="number" id="comm_${catId(cat)}"
+                               min="0" max="100" step="0.1"
+                               value="${commissions[cat] !== undefined ? commissions[cat] : ''}"
+                               placeholder="% general">
+                    </td>
                 </tr>
             `).join('');
         }
 
         function savePrices() {
             const prices = {};
+            const commissions = {};
+
+            const defComm = parseFloat(document.getElementById('defaultCommission').value);
+            if (!isNaN(defComm) && defComm >= 0) commissions['_default'] = defComm;
+
             CATEGORIES.forEach(cat => {
-                const v = parseFloat(document.getElementById(`price_${catId(cat)}`).value);
-                if (!isNaN(v) && v > 0) prices[cat] = v;
+                const price = parseFloat(document.getElementById(`price_${catId(cat)}`).value);
+                if (!isNaN(price) && price > 0) prices[cat] = price;
+
+                const comm = parseFloat(document.getElementById(`comm_${catId(cat)}`).value);
+                if (!isNaN(comm) && comm >= 0) commissions[cat] = comm;
             });
+
             savePricesToStorage(prices);
-            showInlineMsg('pricesSaveMsg', '✓ Precios guardados', 4000);
-            toast('Precios guardados', 'success');
+            localStorage.setItem('clinicCommissions', JSON.stringify(commissions));
+            showInlineMsg('pricesSaveMsg', '✓ Guardado', 4000);
+            toast('Precios y comisiones guardados', 'success');
         }
     </script>
 </body>
