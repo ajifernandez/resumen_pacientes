@@ -678,23 +678,45 @@
         function renderLegend(chart, containerId) {
             const el = document.getElementById(containerId);
             if (!el) return;
-            el.innerHTML = chart.data.datasets.map((ds, i) => {
-                const col = ds.borderColor && ds.type === 'line'
-                    ? ds.borderColor
-                    : (Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i % ds.backgroundColor.length] : ds.backgroundColor);
-                const vis = chart.isDatasetVisible(i);
-                return `<button class="legend-pill${vis ? '' : ' hidden'}"
-                    onclick="toggleDataset('${chart.canvas.id}',${i})"
-                    style="border-color:${col}20; background:${col}12;">
-                    <span class="swatch" style="background:${col};"></span>${ds.label}
-                </button>`;
-            }).join('');
+
+            if (chart.config.type === 'doughnut' || chart.config.type === 'pie') {
+                el.innerHTML = chart.data.labels.map((label, i) => {
+                    const ds = chart.data.datasets[0];
+                    const col = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i % ds.backgroundColor.length] : ds.backgroundColor;
+                    const vis = chart.getDataVisibility(i);
+                    return `<button class="legend-pill${vis ? '' : ' hidden'}"
+                        onclick="toggleDataVisibility('${chart.canvas.id}',${i})"
+                        style="border-color:${col}20; background:${col}12;">
+                        <span class="swatch" style="background:${col};"></span>${label}
+                    </button>`;
+                }).join('');
+            } else {
+                el.innerHTML = chart.data.datasets.map((ds, i) => {
+                    const col = ds.borderColor && ds.type === 'line'
+                        ? ds.borderColor
+                        : (Array.isArray(ds.backgroundColor) ? ds.backgroundColor[0] || ds.backgroundColor : ds.backgroundColor);
+                    const vis = chart.isDatasetVisible(i);
+                    return `<button class="legend-pill${vis ? '' : ' hidden'}"
+                        onclick="toggleDataset('${chart.canvas.id}',${i})"
+                        style="border-color:${col}20; background:${col}12;">
+                        <span class="swatch" style="background:${col};"></span>${ds.label || 'Serie'}
+                    </button>`;
+                }).join('');
+            }
         }
 
         function toggleDataset(canvasId, idx) {
             const c = chartMap[canvasId];
             if (!c) return;
             c.setDatasetVisibility(idx, !c.isDatasetVisible(idx));
+            c.update();
+            renderLegend(c, 'legend-' + canvasId);
+        }
+
+        function toggleDataVisibility(canvasId, idx) {
+            const c = chartMap[canvasId];
+            if (!c) return;
+            c.toggleDataVisibility(idx);
             c.update();
             renderLegend(c, 'legend-' + canvasId);
         }
