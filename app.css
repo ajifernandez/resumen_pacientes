@@ -391,6 +391,15 @@ tbody tr:hover { background: #f8fafc; }
     .input-group { flex-direction: column; align-items: stretch; }
     .data-layout { grid-template-columns: 1fr; }
     .config-layout { grid-template-columns: 1fr; }
+
+    /* ── Historial compacto en móvil ── */
+    #historyTable th { padding: 8px 8px; font-size: 0.75rem; }
+    #historyTable td { padding: 6px 8px; font-size: 0.85rem; }
+    #historyTable .day-group-header td { padding-top: 12px; padding-bottom: 8px; font-size: 0.88rem; }
+    #historyTable tbody tr td:first-child { padding-left: 12px !important; font-size: 0.75rem; }
+    #historyTable .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+    .summary-pills { gap: 6px; margin-bottom: 14px; }
+    .pill { padding: 6px 12px; font-size: 0.8rem; }
 }
 
 /* ── Medium mobile (640–767px) ───────────────────────────────── */
