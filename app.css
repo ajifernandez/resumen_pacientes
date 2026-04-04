@@ -179,7 +179,49 @@ tbody tr { transition: background 0.2s ease; }
 tbody tr:hover { background: #f8fafc; }
 
 .category-row td:first-child { font-weight: 600; }
-.category-row input { width: 100px; text-align: center; }
+.category-row td { padding: 8px 10px; }
+.category-row input { width: 80px; text-align: center; padding: 6px 8px; font-size: 0.9rem; }
+
+/* Precios y Comisiones — campos globales */
+.config-pct-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.config-pct-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.config-pct-row label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.config-pct-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.config-pct-input input {
+    width: 80px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+.config-pct-input span {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
 
 /* Charts */
 .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; }
@@ -444,10 +486,7 @@ tbody tr:hover { background: #f8fafc; }
     /* ── Configuración ── */
     .config-layout { grid-template-columns: 1fr; gap: 16px; }
     .data-layout { grid-template-columns: 1fr; }
-
-    /* Filas % comisión e IRPF: wrap en 2 líneas */
-    .config-pct-row { flex-wrap: wrap; row-gap: 6px; }
-    .config-pct-row label { white-space: normal !important; width: 100%; margin-bottom: 0; }
+    .config-pct-grid { grid-template-columns: 1fr; }
 
     /* Formulario añadir médico: 1 columna */
     .new-doctor-grid { grid-template-columns: 1fr !important; }
