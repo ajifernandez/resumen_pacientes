@@ -14,6 +14,11 @@
     <div class="container">
         <h1 id="app-header">🏥 Control de Pacientes</h1>
 
+        <div class="doctor-bar" id="doctorBar" style="display:none;">
+            <span class="doctor-bar-label">Médico:</span>
+            <select id="doctorSelect" class="doctor-select" onchange="switchDoctor(this.value)"></select>
+        </div>
+
         <div class="mobile-tab-selector" onclick="toggleMobileTabs()">
             <span id="current-tab-name">📅 Entrada Diaria</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -23,6 +28,7 @@
             <button class="tab active"  onclick="showTab('daily',  this)">📅 Entrada Diaria</button>
             <button class="tab"         onclick="showTab('stats',  this)">📊 Estadísticas</button>
             <button class="tab"         onclick="showTab('history',this)">📋 Historial</button>
+            <button class="tab"         onclick="showTab('global', this)">🌐 Global</button>
             <button class="tab"         onclick="showTab('data',   this)">💾 Datos</button>
             <button class="tab"         onclick="showTab('config', this)">⚙️ Configuración</button>
         </div>
@@ -126,6 +132,19 @@
             </div>
         </div>
 
+        <!-- ── Global View ──────────────────────────────────────────────── -->
+        <div id="global-tab" style="display:none;">
+            <div class="card">
+                <div class="month-header">
+                    <h2>Vista Global — Todos los Médicos</h2>
+                    <div class="month-selector">
+                        <select id="globalMonthSelect" onchange="updateGlobal()"></select>
+                    </div>
+                </div>
+                <div id="globalContent"></div>
+            </div>
+        </div>
+
         <!-- ── Data Management ───────────────────────────────────────────── -->
         <div id="data-tab" style="display:none;">
             <div class="card">
@@ -200,39 +219,47 @@
         <div id="config-tab" style="display:none;">
             <div class="config-layout">
 
-                <!-- Left: clinic info -->
+                <!-- Full width: doctor manager -->
+                <div class="card" id="doctorMgrCard" style="grid-column:1/-1; margin-bottom:0;">
+                    <h2>Gestión de Médicos</h2>
+                    <div class="info-box">
+                        Gestiona los médicos de la clínica. Selecciona uno para ver y editar sus datos, precios y categorías independientes.
+                    </div>
+                    <div id="doctorMgrContent"></div>
+                    <div style="margin-top:20px; border-top:1px solid #f1f5f9; padding-top:20px;">
+                        <h3 style="margin-bottom:16px;">Añadir nuevo médico</h3>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                            <div>
+                                <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Nombre *</label>
+                                <input type="text" id="newDoctorName" placeholder="Dr. García López" style="width:100%;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Especialidad</label>
+                                <input type="text" id="newDoctorSpecialty" placeholder="Cardiología" style="width:100%;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">NIF</label>
+                                <input type="text" id="newDoctorNif" placeholder="12345678A" style="width:100%;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Teléfono</label>
+                                <input type="text" id="newDoctorPhone" placeholder="612 345 678" style="width:100%;">
+                            </div>
+                        </div>
+                        <button class="btn btn-success" onclick="addDoctor()">+ Añadir Médico</button>
+                    </div>
+                </div>
+
+                <!-- Left: clinic info (global) -->
                 <div class="card" style="margin-bottom:0;">
                     <h2>Datos de la Clínica</h2>
                     <div class="info-box">
-                        Esta información aparecerá en el encabezado del Payment Order.
+                        Información general de la clínica. Aparecerá en el encabezado del Payment Order.
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px;">
                         <div style="grid-column:1/-1;">
                             <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Nombre / Clínica</label>
                             <input type="text" id="clinicName" placeholder="Ej: Clínica Ejemplo" style="width:100%;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Médico / Profesional</label>
-                            <input type="text" id="clinicDoctor" placeholder="Dr. García López" style="width:100%;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">NIF / CIF</label>
-                            <input type="text" id="clinicNif" placeholder="12345678A" style="width:100%;">
-                        </div>
-                        <div style="grid-column:1/-1;">
-                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Especialidad</label>
-                            <input type="text" id="clinicEspecialidad" placeholder="Ej: Medicina de Familia, Cardiología, Fisioterapia..." style="width:100%;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Teléfono</label>
-                            <input type="text" id="clinicPhone" placeholder="612 345 678" style="width:100%;">
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">% general de la clínica</label>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <input type="number" id="defaultCommission" min="0" max="100" step="0.1" placeholder="Ej: 30" style="width:100%;">
-                                <span style="color:var(--text-muted); white-space:nowrap;">%</span>
-                            </div>
                         </div>
                         <div style="grid-column:1/-1;">
                             <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Dirección</label>
@@ -260,6 +287,11 @@
                     <div class="info-box">
                         Precio por paciente y % de retención de la clínica por categoría.
                         Si <strong>% Clínica</strong> se deja vacío, se aplica el % general.
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+                        <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; white-space:nowrap;">% general de la clínica:</label>
+                        <input type="number" id="defaultCommission" min="0" max="100" step="0.1" placeholder="Ej: 30" style="width:100px;">
+                        <span style="color:var(--text-muted);">%</span>
                     </div>
                     <div class="table-scroll">
                         <table>
@@ -336,7 +368,7 @@
 
         function refreshCategories() {
             try {
-                const s = localStorage.getItem('clinicCategories');
+                const s = localStorage.getItem(dk('clinicCategories'));
                 if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) { CATEGORIES = a; COLORS = a.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]); return; } }
             } catch(e) {}
             CATEGORIES = DEFAULT_CATEGORIES.slice();
@@ -391,7 +423,7 @@
         function saveConfigCategories() {
             const cats = (_pendingCategories || CATEGORIES).filter(c => c.trim().length > 0);
             if (cats.length === 0) { toast('Añade al menos una categoría', 'warning'); return; }
-            localStorage.setItem('clinicCategories', JSON.stringify(cats));
+            localStorage.setItem(dk('clinicCategories'), JSON.stringify(cats));
             refreshCategories();
             initDailyTable();
             loadDayData();
@@ -409,11 +441,13 @@
             if (!el) return;
             const logo = localStorage.getItem('clinicLogo');
             const info = getClinicInfo();
+            const doc  = getCurrentDoctor();
             if (logo) {
                 el.innerHTML = `<img src="${logo}" alt="${info.name || 'Clínica'}" style="max-height:54px; vertical-align:middle; margin-right:12px; border-radius:6px; object-fit:contain;">${info.name || ''}`;
             } else {
-                const esp = info.especialidad ? ` · ${info.especialidad}` : '';
-                el.textContent = `🏥 ${info.name || 'Control de Pacientes'}${esp}`;
+                const docPart = doc?.name ? ` — ${doc.name}` : '';
+                const esp     = doc?.specialty ? ` · ${doc.specialty}` : '';
+                el.textContent = `🏥 ${info.name || 'Control de Pacientes'}${docPart}${esp}`;
             }
         }
 
@@ -445,6 +479,249 @@
             const btn = document.getElementById('logoRemoveBtn');
             if (img) { img.src = logo || ''; img.style.display = logo ? 'inline-block' : 'none'; }
             if (btn) btn.style.display = logo ? 'inline-flex' : 'none';
+        }
+
+        // ── Multi-doctor architecture ─────────────────────────────────────────
+
+        let _currentDoctorId = null;
+
+        function getDoctors() {
+            return JSON.parse(localStorage.getItem('clinicDoctors') || '[]');
+        }
+
+        function saveDoctors(docs) {
+            localStorage.setItem('clinicDoctors', JSON.stringify(docs));
+        }
+
+        function getCurrentDoctorId() {
+            if (_currentDoctorId) return _currentDoctorId;
+            const stored = localStorage.getItem('clinicCurrentDoctor');
+            if (stored) { _currentDoctorId = stored; return stored; }
+            const docs = getDoctors();
+            if (docs.length > 0) { _currentDoctorId = docs[0].id; return docs[0].id; }
+            return null;
+        }
+
+        function getCurrentDoctor() {
+            const id = getCurrentDoctorId();
+            if (!id) return null;
+            return getDoctors().find(d => d.id === id) || null;
+        }
+
+        /** Prefix a localStorage key with the current doctor's id. */
+        function dk(base) {
+            const id = getCurrentDoctorId();
+            return id ? `${base}_${id}` : base;
+        }
+
+        function switchDoctor(id) {
+            _currentDoctorId = id;
+            localStorage.setItem('clinicCurrentDoctor', id);
+            refreshCategories();
+            initDailyTable();
+            loadDayData();
+            updateHeader();
+            updateDoctorBar();
+            const configTab = document.getElementById('config-tab');
+            if (configTab && configTab.style.display !== 'none') {
+                loadPrices();
+                _pendingCategories = null;
+                renderCategoryList();
+                updateLogoPreview();
+            }
+            const doc = getDoctors().find(d => d.id === id);
+            toast(`Médico: ${doc ? doc.name : id}`, 'info');
+        }
+
+        function updateDoctorBar() {
+            const sel = document.getElementById('doctorSelect');
+            if (!sel) return;
+            const docs = getDoctors();
+            const curId = getCurrentDoctorId();
+            sel.innerHTML = docs.map(d =>
+                `<option value="${d.id}" ${d.id === curId ? 'selected' : ''}>${d.name}${d.specialty ? ' · ' + d.specialty : ''}</option>`
+            ).join('');
+            const bar = document.getElementById('doctorBar');
+            if (bar) bar.style.display = docs.length > 0 ? 'flex' : 'none';
+        }
+
+        function migrateIfNeeded() {
+            const docs = getDoctors();
+            if (docs.length > 0) {
+                // Already has doctors — restore current selection
+                const stored = localStorage.getItem('clinicCurrentDoctor');
+                if (stored && docs.find(d => d.id === stored)) {
+                    _currentDoctorId = stored;
+                } else {
+                    _currentDoctorId = docs[0].id;
+                    localStorage.setItem('clinicCurrentDoctor', _currentDoctorId);
+                }
+                return;
+            }
+            // First run: create initial doctor from existing clinicInfo
+            const info = JSON.parse(localStorage.getItem('clinicInfo') || '{}');
+            const id = 'doc_' + Date.now();
+            const doctor = {
+                id,
+                name:      info.doctor      || 'Médico 1',
+                specialty: info.especialidad || '',
+                nif:       info.nif          || '',
+                phone:     info.phone        || ''
+            };
+            saveDoctors([doctor]);
+            localStorage.setItem('clinicCurrentDoctor', id);
+            _currentDoctorId = id;
+            // Copy any existing prefixless data to doctor-specific keys
+            ['clinicEntries','clinicPrices','clinicCommissions','clinicCategories'].forEach(key => {
+                const val = localStorage.getItem(key);
+                if (val !== null) localStorage.setItem(`${key}_${id}`, val);
+            });
+        }
+
+        function renderDoctorManager() {
+            const el = document.getElementById('doctorMgrContent');
+            if (!el) return;
+            const docs = getDoctors();
+            const curId = getCurrentDoctorId();
+            if (docs.length === 0) {
+                el.innerHTML = '<p style="color:#94a3b8;">No hay médicos registrados.</p>';
+                return;
+            }
+            el.innerHTML = `<div class="table-scroll"><table>
+                <thead><tr>
+                    <th>Nombre</th><th>Especialidad</th><th>NIF</th><th>Teléfono</th><th style="width:160px;">Acciones</th>
+                </tr></thead>
+                <tbody>
+                ${docs.map(d => `
+                    <tr ${d.id === curId ? 'style="background:#f0f4ff;"' : ''}>
+                        <td><strong>${d.name}</strong>${d.id === curId ? ' <span style="color:#4f46e5; font-size:0.75rem;">(activo)</span>' : ''}</td>
+                        <td>${d.specialty || '—'}</td>
+                        <td>${d.nif || '—'}</td>
+                        <td>${d.phone || '—'}</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                <button class="btn btn-outline btn-sm" onclick="switchDoctor('${d.id}')">Seleccionar</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteDoctor('${d.id}')" ${docs.length === 1 ? 'disabled' : ''}>×</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('')}
+                </tbody>
+            </table></div>`;
+        }
+
+        function addDoctor() {
+            const name      = (document.getElementById('newDoctorName').value      || '').trim();
+            const specialty = (document.getElementById('newDoctorSpecialty').value || '').trim();
+            const nif       = (document.getElementById('newDoctorNif').value       || '').trim();
+            const phone     = (document.getElementById('newDoctorPhone').value     || '').trim();
+            if (!name) { toast('El nombre del médico es obligatorio', 'warning'); return; }
+            const id = 'doc_' + Date.now();
+            const docs = getDoctors();
+            docs.push({ id, name, specialty, nif, phone });
+            saveDoctors(docs);
+            ['newDoctorName','newDoctorSpecialty','newDoctorNif','newDoctorPhone'].forEach(fid => {
+                const el = document.getElementById(fid); if (el) el.value = '';
+            });
+            updateDoctorBar();
+            renderDoctorManager();
+            toast(`Médico "${name}" añadido`, 'success');
+        }
+
+        function deleteDoctor(id) {
+            const docs = getDoctors();
+            if (docs.length <= 1) { toast('No puedes eliminar el último médico', 'warning'); return; }
+            const doc = docs.find(d => d.id === id);
+            if (!doc) return;
+            if (!confirm(`¿Eliminar al médico "${doc.name}" y todos sus datos? Esta acción no se puede deshacer.`)) return;
+            ['clinicEntries','clinicPrices','clinicCommissions','clinicCategories'].forEach(key => {
+                localStorage.removeItem(`${key}_${id}`);
+            });
+            const newDocs = docs.filter(d => d.id !== id);
+            saveDoctors(newDocs);
+            if (id === getCurrentDoctorId()) {
+                _currentDoctorId = null;
+                switchDoctor(newDocs[0].id);
+            } else {
+                updateDoctorBar();
+                renderDoctorManager();
+            }
+            toast(`Médico "${doc.name}" eliminado`, 'info');
+        }
+
+        function getAvailableMonthsAllDoctors() {
+            const months = new Set();
+            getDoctors().forEach(doc => {
+                const entries = JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]');
+                entries.forEach(e => months.add(e.date.substring(0, 7)));
+            });
+            const now = new Date();
+            for (let i = 0; i < 3; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+            }
+            return [...months].sort().reverse();
+        }
+
+        function updateGlobal() {
+            const el = document.getElementById('globalContent');
+            if (!el) return;
+            const docs = getDoctors();
+
+            // Populate month selector
+            const sel = document.getElementById('globalMonthSelect');
+            if (sel) {
+                const months = getAvailableMonthsAllDoctors();
+                const prev = sel.value;
+                sel.innerHTML = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
+                sel.value = (prev && months.includes(prev)) ? prev : (months[0] || getCurrentMonth());
+            }
+
+            if (docs.length === 0) {
+                el.innerHTML = '<p style="color:#94a3b8;">No hay médicos registrados.</p>';
+                return;
+            }
+            const month = sel ? sel.value : getCurrentMonth();
+            let html = `<div class="table-scroll"><table>
+                <thead><tr>
+                    <th>Médico</th><th>Especialidad</th>
+                    <th style="text-align:right;">Pacientes</th>
+                    <th style="text-align:right;">Bruto</th>
+                    <th style="text-align:right;">Retención</th>
+                    <th style="text-align:right;">Neto</th>
+                </tr></thead><tbody>`;
+            let tPac = 0, tGross = 0, tRet = 0, tNet = 0;
+            docs.forEach(doc => {
+                const entries = JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]').filter(e => e.date.startsWith(month));
+                const prices  = JSON.parse(localStorage.getItem(`clinicPrices_${doc.id}`)  || '{}');
+                const comms   = JSON.parse(localStorage.getItem(`clinicCommissions_${doc.id}`) || '{}');
+                const pac = entries.reduce((s, e) => s + e.count, 0);
+                let gross = 0, ret = 0;
+                entries.forEach(e => {
+                    const g = e.count * (prices[e.category] || 0);
+                    const pct = comms[e.category] !== undefined ? comms[e.category] : (comms['_default'] || 0);
+                    gross += g; ret += g * pct / 100;
+                });
+                const net = gross - ret;
+                tPac += pac; tGross += gross; tRet += ret; tNet += net;
+                html += `<tr>
+                    <td><strong>${doc.name}</strong></td>
+                    <td>${doc.specialty || '—'}</td>
+                    <td style="text-align:right;">${pac}</td>
+                    <td style="text-align:right;">${gross > 0 ? gross.toFixed(2) + ' €' : '—'}</td>
+                    <td style="text-align:right; color:#e74c3c;">${ret > 0 ? '− ' + ret.toFixed(2) + ' €' : '—'}</td>
+                    <td style="text-align:right; color:#27ae60; font-weight:700;">${net > 0 ? net.toFixed(2) + ' €' : '—'}</td>
+                </tr>`;
+            });
+            html += `<tr style="background:#f8fafc; font-weight:700; border-top:2px solid #e2e8f0;">
+                <td colspan="2">TOTAL</td>
+                <td style="text-align:right;">${tPac}</td>
+                <td style="text-align:right;">${tGross > 0 ? tGross.toFixed(2) + ' €' : '—'}</td>
+                <td style="text-align:right; color:#e74c3c;">${tRet > 0 ? '− ' + tRet.toFixed(2) + ' €' : '—'}</td>
+                <td style="text-align:right; color:#27ae60;">${tNet > 0 ? tNet.toFixed(2) + ' €' : '—'}</td>
+            </tr>`;
+            html += `</tbody></table></div>`;
+            el.innerHTML = html;
         }
 
         function renderLegend(chart, containerId) {
@@ -559,24 +836,27 @@
         // ── Storage ───────────────────────────────────────────────────────────
 
         function getEntries() {
-            return JSON.parse(localStorage.getItem('clinicEntries') || '[]');
+            return JSON.parse(localStorage.getItem(dk('clinicEntries')) || '[]');
         }
 
         function saveEntries(entries) {
-            localStorage.setItem('clinicEntries', JSON.stringify(entries));
+            localStorage.setItem(dk('clinicEntries'), JSON.stringify(entries));
         }
 
         function getPrices() {
-            return JSON.parse(localStorage.getItem('clinicPrices') || '{}');
+            return JSON.parse(localStorage.getItem(dk('clinicPrices')) || '{}');
         }
 
         function savePricesToStorage(prices) {
-            localStorage.setItem('clinicPrices', JSON.stringify(prices));
+            localStorage.setItem(dk('clinicPrices'), JSON.stringify(prices));
         }
 
         // ── Initialisation ────────────────────────────────────────────────────
 
         document.getElementById('entryDate').valueAsDate = new Date();
+        migrateIfNeeded();      // sets _currentDoctorId, copies prefixless keys on first run
+        refreshCategories();    // re-read with dk() now that _currentDoctorId is set
+        updateDoctorBar();
         initDailyTable();
         loadDayData();
         updateHeader();
@@ -622,14 +902,15 @@
                 if(selector) selector.classList.remove('expanded');
             }
 
-            ['daily','stats','history','data','config'].forEach(t => {
+            ['daily','stats','history','global','data','config'].forEach(t => {
                 document.getElementById(`${t}-tab`).style.display = (t === tab) ? 'block' : 'none';
             });
 
             if      (tab === 'stats')   { updateMonthSelects('stats');   updateStats();   }
             else if (tab === 'history') { updateMonthSelects('history'); updateHistory(); }
+            else if (tab === 'global')  { updateGlobal(); }  // selector populated inside updateGlobal
             else if (tab === 'data')    { updateDataTab(); }
-            else if (tab === 'config')  { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); }
+            else if (tab === 'config')  { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); renderDoctorManager(); }
             else if (tab === 'daily')   { loadDayData(); }
         }
 
@@ -1329,7 +1610,7 @@
                         const newEntries = valid.map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
                         saveEntries(newEntries);
                         if (importedPrices)      savePricesToStorage(importedPrices);
-                        if (importedCommissions) localStorage.setItem('clinicCommissions', JSON.stringify(importedCommissions));
+                        if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify(importedCommissions));
                         if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify(importedClinicInfo));
                         toast(
                             `Datos reemplazados: ${newEntries.length} registros importados`,
@@ -1347,7 +1628,7 @@
 
                         // Merge: current values take priority over imported
                         if (importedPrices)      savePricesToStorage({ ...importedPrices, ...getPrices() });
-                        if (importedCommissions) localStorage.setItem('clinicCommissions', JSON.stringify({ ...importedCommissions, ...getCommissions() }));
+                        if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify({ ...importedCommissions, ...getCommissions() }));
                         if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify({ ...importedClinicInfo, ...getClinicInfo() }));
 
                         const skipped = valid.length - toAdd.length;
@@ -1373,11 +1654,11 @@
             const btn = document.getElementById('clearBtn');
             if (btn.dataset.confirm === '1') {
                 clearTimeout(clearTimer);
-                localStorage.removeItem('clinicEntries');
-                localStorage.removeItem('clinicPrices');
+                localStorage.removeItem(dk('clinicEntries'));
+                localStorage.removeItem(dk('clinicPrices'));
+                localStorage.removeItem(dk('clinicCommissions'));
+                localStorage.removeItem(dk('clinicCategories'));
                 localStorage.removeItem('clinicNextId');
-                localStorage.removeItem('clinicCategories');
-                localStorage.removeItem('clinicLogo');
                 btn.dataset.confirm = '';
                 btn.textContent     = '🗑️ Borrar Todos los Datos';
                 btn.className       = 'btn btn-danger';
@@ -1405,7 +1686,7 @@
 
         function loadClinicInfo() {
             const info = getClinicInfo();
-            ['Name','Doctor','Especialidad','Nif','Phone','Address'].forEach(field => {
+            ['Name','Address'].forEach(field => {
                 const el = document.getElementById(`clinic${field}`);
                 if (el) el.value = info[field.toLowerCase()] || '';
             });
@@ -1413,12 +1694,8 @@
 
         function saveClinicInfo() {
             const info = {
-                name:         document.getElementById('clinicName').value.trim(),
-                doctor:       document.getElementById('clinicDoctor').value.trim(),
-                especialidad: document.getElementById('clinicEspecialidad').value.trim(),
-                nif:          document.getElementById('clinicNif').value.trim(),
-                phone:        document.getElementById('clinicPhone').value.trim(),
-                address:      document.getElementById('clinicAddress').value.trim()
+                name:    document.getElementById('clinicName').value.trim(),
+                address: document.getElementById('clinicAddress').value.trim()
             };
             localStorage.setItem('clinicInfo', JSON.stringify(info));
             showInlineMsg('clinicSaveMsg', '✓ Datos guardados', 4000);
@@ -1459,6 +1736,7 @@
             // Serialize line data for the inline script
             const linesJson = JSON.stringify(lines);
 
+            const doc        = getCurrentDoctor();
             const clinicLogo = localStorage.getItem('clinicLogo');
             const logoHtml = clinicLogo
                 ? `<img src="${clinicLogo}" alt="${info.name || ''}" style="max-height:50px; max-width:180px; object-fit:contain; margin-bottom:6px; display:block; border-radius:4px;">`
@@ -1468,11 +1746,11 @@
                     <div class="inv-from">
                         ${logoHtml}
                         <div class="inv-clinic">${info.name || 'Clínica'}</div>
-                        ${info.especialidad ? `<div style="font-size:0.9rem; color:#667eea; font-weight:600; margin-bottom:2px;">${info.especialidad}</div>` : ''}
-                        ${info.doctor  ? `<div>${info.doctor}</div>`  : ''}
-                        ${info.nif     ? `<div>NIF: ${info.nif}</div>` : ''}
-                        ${info.address ? `<div>${info.address}</div>` : ''}
-                        ${info.phone   ? `<div>Tel: ${info.phone}</div>` : ''}
+                        ${doc?.specialty ? `<div style="font-size:0.9rem; color:#667eea; font-weight:600; margin-bottom:2px;">${doc.specialty}</div>` : ''}
+                        ${doc?.name    ? `<div>${doc.name}</div>`       : ''}
+                        ${doc?.nif     ? `<div>NIF: ${doc.nif}</div>`   : ''}
+                        ${info.address ? `<div>${info.address}</div>`   : ''}
+                        ${doc?.phone   ? `<div>Tel: ${doc.phone}</div>` : ''}
                     </div>
                     <div class="inv-meta">
                         <div class="inv-num">${orderNum}</div>
@@ -1717,7 +1995,7 @@
                 const newEntries = SAMPLE_DATA.entries.map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
                 saveEntries(newEntries);
                 savePricesToStorage(SAMPLE_DATA.prices);
-                localStorage.setItem('clinicCommissions', JSON.stringify(SAMPLE_DATA.commissions));
+                localStorage.setItem(dk('clinicCommissions'), JSON.stringify(SAMPLE_DATA.commissions));
                 localStorage.setItem('clinicInfo', JSON.stringify(SAMPLE_DATA.clinicInfo));
                 toast(`Datos de ejemplo cargados: ${newEntries.length} registros`, 'success', 4000);
             } else {
@@ -1728,7 +2006,7 @@
                     .map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
                 saveEntries([...current, ...toAdd]);
                 savePricesToStorage({ ...SAMPLE_DATA.prices, ...getPrices() });
-                localStorage.setItem('clinicCommissions', JSON.stringify({ ...SAMPLE_DATA.commissions, ...getCommissions() }));
+                localStorage.setItem(dk('clinicCommissions'), JSON.stringify({ ...SAMPLE_DATA.commissions, ...getCommissions() }));
                 localStorage.setItem('clinicInfo', JSON.stringify({ ...SAMPLE_DATA.clinicInfo, ...getClinicInfo() }));
                 const skipped = SAMPLE_DATA.entries.length - toAdd.length;
                 toast(
@@ -1743,7 +2021,7 @@
         // ── Commissions ───────────────────────────────────────────────────────
 
         function getCommissions() {
-            return JSON.parse(localStorage.getItem('clinicCommissions') || '{}');
+            return JSON.parse(localStorage.getItem(dk('clinicCommissions')) || '{}');
         }
 
         /** Returns the effective commission % for a category (0-100). */
@@ -1798,7 +2076,7 @@
             });
 
             savePricesToStorage(prices);
-            localStorage.setItem('clinicCommissions', JSON.stringify(commissions));
+            localStorage.setItem(dk('clinicCommissions'), JSON.stringify(commissions));
             showInlineMsg('pricesSaveMsg', '✓ Guardado', 4000);
             toast('Precios y comisiones guardados', 'success');
         }
