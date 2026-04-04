@@ -356,7 +356,12 @@ tbody tr:hover { background: #f8fafc; }
 
 /* ── Mobile overrides (< 640px) ──────────────────────────────── */
 @media (max-width: 639px) {
-    body { padding: 12px 10px; }
+    /* Evitar desbordamiento horizontal en toda la página */
+    body { padding: 12px 10px; overflow-x: hidden; }
+    .container { overflow-x: hidden; }
+    /* min-width:0 en hijos de grids para que respeten el ancho de columna */
+    .config-layout > *, .daily-layout > *, .data-layout > *,
+    .stats-grid > *, .charts-container > * { min-width: 0; }
     h1 { font-size: 1.35rem; margin-bottom: 16px; }
     .card { padding: 18px 14px; border-radius: 16px; margin-bottom: 16px; }
     .card h2 { font-size: 1.15rem; margin-bottom: 14px; }
@@ -442,8 +447,11 @@ tbody tr:hover { background: #f8fafc; }
     /* Formulario añadir médico: 1 columna */
     .new-doctor-grid { grid-template-columns: 1fr !important; }
 
-    /* Tabla doctor manager: compacta */
-    #doctorMgrContent th, #doctorMgrContent td { padding: 8px 8px; font-size: 0.82rem; }
+    /* Tabla doctor manager: ocultar columnas secundarias, mostrar sólo Nombre + Acciones */
+    #doctorMgrContent th:nth-child(2), #doctorMgrContent td:nth-child(2),
+    #doctorMgrContent th:nth-child(3), #doctorMgrContent td:nth-child(3),
+    #doctorMgrContent th:nth-child(4), #doctorMgrContent td:nth-child(4) { display: none; }
+    #doctorMgrContent th, #doctorMgrContent td { padding: 8px 10px; font-size: 0.88rem; }
 
     .irpf-hint { display: none; }
     .radio-group { flex-direction: column; gap: 10px; }
