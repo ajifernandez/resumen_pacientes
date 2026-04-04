@@ -420,7 +420,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🏥 Control de Pacientes</h1>
+        <h1 id="app-header">🏥 Control de Pacientes</h1>
 
         <div class="mobile-tab-selector" onclick="toggleMobileTabs()">
             <span id="current-tab-name">📅 Entrada Diaria</span>
@@ -627,6 +627,10 @@
                             <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">NIF / CIF</label>
                             <input type="text" id="clinicNif" placeholder="12345678A" style="width:100%;">
                         </div>
+                        <div style="grid-column:1/-1;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Especialidad</label>
+                            <input type="text" id="clinicEspecialidad" placeholder="Ej: Medicina de Familia, Cardiología, Fisioterapia..." style="width:100%;">
+                        </div>
                         <div>
                             <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Teléfono</label>
                             <input type="text" id="clinicPhone" placeholder="612 345 678" style="width:100%;">
@@ -641,6 +645,15 @@
                         <div style="grid-column:1/-1;">
                             <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Dirección</label>
                             <input type="text" id="clinicAddress" placeholder="Calle Mayor 1, 28001 Madrid" style="width:100%;">
+                        </div>
+                        <div style="grid-column:1/-1;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Logo de la clínica</label>
+                            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                                <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('logoInput').click()">📷 Subir logo</button>
+                                <input type="file" id="logoInput" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+                                <button class="btn btn-danger btn-sm" id="logoRemoveBtn" type="button" onclick="removeLogo()" style="display:none;">× Eliminar logo</button>
+                                <img id="logoPreviewImg" style="max-height:40px; max-width:150px; object-fit:contain; display:none;" alt="Logo">
+                            </div>
                         </div>
                     </div>
                     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -674,6 +687,36 @@
                     </div>
                 </div>
 
+                <!-- Categorías de Pacientes - ancho completo -->
+                <div class="card" style="grid-column:1/-1; margin-bottom:0;">
+                    <h2>Categorías de Pacientes</h2>
+                    <div class="info-box">
+                        Define las categorías para este médico. Cada especialidad tiene sus propias categorías. Los datos históricos conservan sus categorías originales aunque las elimines aquí.
+                    </div>
+                    <div style="margin-bottom:16px;">
+                        <p style="font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:10px;">Presets por especialidad:</p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Médico de Familia')">👨‍⚕️ Médico de Familia</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Cardiología')">❤️ Cardiología</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Ginecología')">🌸 Ginecología</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Pediatría')">👶 Pediatría</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Logopedia')">🗣️ Logopedia</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Fisioterapia')">💪 Fisioterapia</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Psicología')">🧠 Psicología</button>
+                            <button class="btn btn-outline btn-sm" onclick="loadPreset('Dermatología')">🔬 Dermatología</button>
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-bottom:16px;">
+                        <input type="text" id="newCatInput" placeholder="Nueva categoría (ej: Adeslas Revisión)" style="flex:1; min-width:200px;">
+                        <button class="btn btn-success" onclick="addCategory()">+ Añadir</button>
+                    </div>
+                    <div id="categoriesList" style="margin-bottom:16px;"></div>
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <button class="btn btn-success" onclick="saveConfigCategories()">💾 Guardar Categorías</button>
+                        <span id="catSaveMsg" class="save-msg" style="display:none;"></span>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -683,7 +726,7 @@
     <script>
         // ── Constants ─────────────────────────────────────────────────────────
 
-        const CATEGORIES = [
+        const DEFAULT_CATEGORIES = [
             'Adeslas', 'Adeslas Revisión', 'Adeslas Funcionarios', 'Adeslas Vacuna Funcionarios',
             'DKV', 'DKV Revisión', 'DKV Famedic', 'DKV Famedic Revisión',
             'Mapfre', 'Mapfre Revisión',
@@ -692,17 +735,184 @@
             'Vacunas'
         ];
 
-        const COLORS = [
-            '#667eea','#5b8dee','#3b82f6','#93c5fd',   // Adeslas group (blues)
-            '#10b981','#34d399','#059669','#6ee7b7', // DKV group (greens)
-            '#f59e0b','#fbbf24',              // Mapfre group (ambers)
-            '#ef4444','#f87171',              // AXA group (reds)
-            '#8b5cf6','#a78bfa',              // Privado group (purples)
-            '#06b6d4'                          // Vacunas (cyan)
+        const COLOR_PALETTE = [
+            '#667eea','#5b8dee','#3b82f6','#93c5fd',
+            '#10b981','#34d399','#059669','#6ee7b7',
+            '#f59e0b','#fbbf24','#f97316','#fb923c',
+            '#ef4444','#f87171','#dc2626','#fca5a5',
+            '#8b5cf6','#a78bfa','#7c3aed','#c4b5fd',
+            '#06b6d4','#22d3ee','#0891b2','#67e8f9',
+            '#ec4899','#f43f5e'
         ];
+
+        const SPECIALTY_PRESETS = {
+            'Médico de Familia': [
+                'Adeslas','Adeslas Revisión','Adeslas Funcionarios','Adeslas Vacuna Funcionarios',
+                'DKV','DKV Revisión','DKV Famedic','DKV Famedic Revisión',
+                'Mapfre','Mapfre Revisión','AXA','AXA Revisión',
+                'Privado Efectivo','Privado Tarjeta','Vacunas'
+            ],
+            'Cardiología': [
+                'Adeslas','Adeslas Revisión','DKV','DKV Revisión',
+                'Mapfre','Mapfre Revisión','AXA','AXA Revisión',
+                'Privado Efectivo','Privado Tarjeta','Ecocardio','Holter','Ergometría'
+            ],
+            'Ginecología': [
+                'Adeslas','Adeslas Revisión','DKV','DKV Revisión',
+                'Mapfre','Mapfre Revisión','AXA','AXA Revisión',
+                'Privado Efectivo','Privado Tarjeta','Ecografía','Citología'
+            ],
+            'Pediatría': [
+                'Adeslas','Adeslas Revisión','DKV','DKV Revisión',
+                'Mapfre','Mapfre Revisión','AXA','AXA Revisión',
+                'Privado Efectivo','Privado Tarjeta','Vacunas','Urgencias'
+            ],
+            'Logopedia': [
+                'Sesión Individual','Sesión Grupal','Evaluación Inicial','Informe',
+                'Adeslas','DKV','Mapfre','Mutua','Privado Efectivo','Privado Tarjeta'
+            ],
+            'Fisioterapia': [
+                'Sesión Manual','Electroterapia','Punción Seca','Pilates Terapéutico',
+                'Valoración Inicial','Adeslas','DKV','Mapfre','Mutua','Privado Efectivo','Privado Tarjeta'
+            ],
+            'Psicología': [
+                'Primera Consulta','Sesión Individual','Sesión Pareja','Sesión Familiar',
+                'Seguimiento','Adeslas','DKV','Mapfre','Privado Efectivo','Privado Tarjeta'
+            ],
+            'Dermatología': [
+                'Adeslas','Adeslas Revisión','DKV','DKV Revisión',
+                'Mapfre','Mapfre Revisión','AXA','AXA Revisión',
+                'Privado Efectivo','Privado Tarjeta','Biopsia','Criocirugía','Cirugía'
+            ]
+        };
+
+        // CATEGORIES y COLORS son let para poder actualizarse cuando el médico configura sus categorías
+        let CATEGORIES = (() => {
+            try {
+                const s = localStorage.getItem('clinicCategories');
+                if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) return a; }
+            } catch(e) {}
+            return DEFAULT_CATEGORIES.slice();
+        })();
+        let COLORS = CATEGORIES.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]);
 
         let pieChart, barChart, lineChart, annualChart;
         const chartMap = {};
+
+        // ── Dynamic categories ────────────────────────────────────────────────
+
+        function refreshCategories() {
+            try {
+                const s = localStorage.getItem('clinicCategories');
+                if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) { CATEGORIES = a; COLORS = a.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]); return; } }
+            } catch(e) {}
+            CATEGORIES = DEFAULT_CATEGORIES.slice();
+            COLORS = CATEGORIES.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]);
+        }
+
+        let _pendingCategories = null;
+
+        function renderCategoryList() {
+            const el = document.getElementById('categoriesList');
+            if (!el) return;
+            if (!_pendingCategories) _pendingCategories = CATEGORIES.slice();
+            const cats = _pendingCategories;
+            if (cats.length === 0) {
+                el.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">Sin categorías. Añade una o carga un preset.</p>';
+                return;
+            }
+            el.innerHTML = cats.map((cat, i) => `
+                <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                    <span style="width:14px; height:14px; border-radius:3px; background:${COLOR_PALETTE[i % COLOR_PALETTE.length]}; flex-shrink:0; display:inline-block;"></span>
+                    <span style="flex:1; font-size:0.95rem; color:var(--text-main);">${cat}</span>
+                    <button class="btn btn-danger btn-sm" onclick="pendingRemoveCategory(${i})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function pendingRemoveCategory(idx) {
+            if (!_pendingCategories) _pendingCategories = CATEGORIES.slice();
+            _pendingCategories.splice(idx, 1);
+            renderCategoryList();
+        }
+
+        function addCategory() {
+            const input = document.getElementById('newCatInput');
+            const name = (input.value || '').trim();
+            if (!name) { toast('Introduce el nombre de la categoría', 'warning'); return; }
+            if (!_pendingCategories) _pendingCategories = CATEGORIES.slice();
+            if (_pendingCategories.includes(name)) { toast('Esa categoría ya existe', 'warning'); return; }
+            _pendingCategories.push(name);
+            input.value = '';
+            renderCategoryList();
+        }
+
+        function loadPreset(presetName) {
+            const preset = SPECIALTY_PRESETS[presetName];
+            if (!preset) return;
+            _pendingCategories = preset.slice();
+            renderCategoryList();
+            toast(`Preset "${presetName}" cargado — guarda para aplicar`, 'info');
+        }
+
+        function saveConfigCategories() {
+            const cats = (_pendingCategories || CATEGORIES).filter(c => c.trim().length > 0);
+            if (cats.length === 0) { toast('Añade al menos una categoría', 'warning'); return; }
+            localStorage.setItem('clinicCategories', JSON.stringify(cats));
+            refreshCategories();
+            initDailyTable();
+            loadDayData();
+            _pendingCategories = null;
+            renderCategoryList();
+            loadPrices();
+            showInlineMsg('catSaveMsg', '✓ Categorías guardadas', 4000);
+            toast('Categorías actualizadas', 'success');
+        }
+
+        // ── Logo & Header ─────────────────────────────────────────────────────
+
+        function updateHeader() {
+            const el = document.getElementById('app-header');
+            if (!el) return;
+            const logo = localStorage.getItem('clinicLogo');
+            const info = getClinicInfo();
+            if (logo) {
+                el.innerHTML = `<img src="${logo}" alt="${info.name || 'Clínica'}" style="max-height:54px; vertical-align:middle; margin-right:12px; border-radius:6px; object-fit:contain;">${info.name || ''}`;
+            } else {
+                const esp = info.especialidad ? ` · ${info.especialidad}` : '';
+                el.textContent = `🏥 ${info.name || 'Control de Pacientes'}${esp}`;
+            }
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 524288) { toast('El logo no debe superar 512 KB', 'warning'); return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                localStorage.setItem('clinicLogo', e.target.result);
+                updateLogoPreview();
+                updateHeader();
+                toast('Logo guardado', 'success');
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function removeLogo() {
+            localStorage.removeItem('clinicLogo');
+            updateLogoPreview();
+            updateHeader();
+            toast('Logo eliminado', 'info');
+        }
+
+        function updateLogoPreview() {
+            const logo = localStorage.getItem('clinicLogo');
+            const img = document.getElementById('logoPreviewImg');
+            const btn = document.getElementById('logoRemoveBtn');
+            if (img) { img.src = logo || ''; img.style.display = logo ? 'inline-block' : 'none'; }
+            if (btn) btn.style.display = logo ? 'inline-flex' : 'none';
+        }
 
         function renderLegend(chart, containerId) {
             const el = document.getElementById(containerId);
@@ -836,6 +1046,7 @@
         document.getElementById('entryDate').valueAsDate = new Date();
         initDailyTable();
         loadDayData();
+        updateHeader();
 
         function initDailyTable() {
             document.getElementById('dailyTableBody').innerHTML = CATEGORIES.map(cat => `
@@ -885,7 +1096,7 @@
             if      (tab === 'stats')   { updateMonthSelects('stats');   updateStats();   }
             else if (tab === 'history') { updateMonthSelects('history'); updateHistory(); }
             else if (tab === 'data')    { updateDataTab(); }
-            else if (tab === 'config')  { loadPrices(); }
+            else if (tab === 'config')  { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); }
             else if (tab === 'daily')   { loadDayData(); }
         }
 
@@ -1632,9 +1843,13 @@
                 localStorage.removeItem('clinicEntries');
                 localStorage.removeItem('clinicPrices');
                 localStorage.removeItem('clinicNextId');
+                localStorage.removeItem('clinicCategories');
+                localStorage.removeItem('clinicLogo');
                 btn.dataset.confirm = '';
                 btn.textContent     = '🗑️ Borrar Todos los Datos';
                 btn.className       = 'btn btn-danger';
+                refreshCategories();
+                updateHeader();
                 updateDataTab();
                 toast('Todos los datos han sido eliminados', 'info');
             } else {
@@ -1657,7 +1872,7 @@
 
         function loadClinicInfo() {
             const info = getClinicInfo();
-            ['Name','Doctor','Nif','Phone','Address'].forEach(field => {
+            ['Name','Doctor','Especialidad','Nif','Phone','Address'].forEach(field => {
                 const el = document.getElementById(`clinic${field}`);
                 if (el) el.value = info[field.toLowerCase()] || '';
             });
@@ -1665,15 +1880,17 @@
 
         function saveClinicInfo() {
             const info = {
-                name:    document.getElementById('clinicName').value.trim(),
-                doctor:  document.getElementById('clinicDoctor').value.trim(),
-                nif:     document.getElementById('clinicNif').value.trim(),
-                phone:   document.getElementById('clinicPhone').value.trim(),
-                address: document.getElementById('clinicAddress').value.trim()
+                name:         document.getElementById('clinicName').value.trim(),
+                doctor:       document.getElementById('clinicDoctor').value.trim(),
+                especialidad: document.getElementById('clinicEspecialidad').value.trim(),
+                nif:          document.getElementById('clinicNif').value.trim(),
+                phone:        document.getElementById('clinicPhone').value.trim(),
+                address:      document.getElementById('clinicAddress').value.trim()
             };
             localStorage.setItem('clinicInfo', JSON.stringify(info));
             showInlineMsg('clinicSaveMsg', '✓ Datos guardados', 4000);
             toast('Datos de la clínica guardados', 'success');
+            updateHeader();
         }
 
         // ── Payment Order ─────────────────────────────────────────────────────
@@ -1709,10 +1926,16 @@
             // Serialize line data for the inline script
             const linesJson = JSON.stringify(lines);
 
+            const clinicLogo = localStorage.getItem('clinicLogo');
+            const logoHtml = clinicLogo
+                ? `<img src="${clinicLogo}" alt="${info.name || ''}" style="max-height:50px; max-width:180px; object-fit:contain; margin-bottom:6px; display:block; border-radius:4px;">`
+                : '';
             const headerHtml = `
                 <div class="inv-header">
                     <div class="inv-from">
+                        ${logoHtml}
                         <div class="inv-clinic">${info.name || 'Clínica'}</div>
+                        ${info.especialidad ? `<div style="font-size:0.9rem; color:#667eea; font-weight:600; margin-bottom:2px;">${info.especialidad}</div>` : ''}
                         ${info.doctor  ? `<div>${info.doctor}</div>`  : ''}
                         ${info.nif     ? `<div>NIF: ${info.nif}</div>` : ''}
                         ${info.address ? `<div>${info.address}</div>` : ''}
