@@ -19,7 +19,11 @@
 *, *::before, *::after {
     margin: 0; padding: 0; box-sizing: border-box;
     font-family: 'Inter', sans-serif;
+    min-width: 0; /* Evita que hijos de grid/flex desborden su columna */
 }
+
+/* Prevención global de desbordamiento horizontal */
+html { overflow-x: hidden; }
 
 body {
     background: var(--bg-gradient);
@@ -27,6 +31,7 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     padding: 30px 20px;
+    overflow-x: hidden;
 }
 
 /* Title */
@@ -37,9 +42,11 @@ h1 {
     font-size: 2.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
-.container { max-width: 1200px; margin: 0 auto; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; overflow-x: hidden; }
 
 /* Navigation Tabs */
 .tabs {
@@ -98,6 +105,7 @@ input[type="date"], input[type="number"], input[type="text"], select {
     color: var(--text-main);
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    max-width: 100%;
 }
 
 input:focus, select:focus {
@@ -286,6 +294,8 @@ tbody tr:hover { background: #f8fafc; }
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
+    max-width: 100%;
+    width: 100%;
 }
 
 /* ── Breakpoints ─────────────────────────────────────────────── */
@@ -356,12 +366,7 @@ tbody tr:hover { background: #f8fafc; }
 
 /* ── Mobile overrides (< 640px) ──────────────────────────────── */
 @media (max-width: 639px) {
-    /* Evitar desbordamiento horizontal en toda la página */
-    body { padding: 12px 10px; overflow-x: hidden; }
-    .container { overflow-x: hidden; }
-    /* min-width:0 en hijos de grids para que respeten el ancho de columna */
-    .config-layout > *, .daily-layout > *, .data-layout > *,
-    .stats-grid > *, .charts-container > * { min-width: 0; }
+    body { padding: 12px 10px; }
     h1 { font-size: 1.35rem; margin-bottom: 16px; }
     .card { padding: 18px 14px; border-radius: 16px; margin-bottom: 16px; }
     .card h2 { font-size: 1.15rem; margin-bottom: 14px; }
