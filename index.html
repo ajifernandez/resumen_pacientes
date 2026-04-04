@@ -288,10 +288,16 @@
                         Precio por paciente y % de retención de la clínica por categoría.
                         Si <strong>% Clínica</strong> se deja vacío, se aplica el % general.
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
                         <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; white-space:nowrap;">% general de la clínica:</label>
                         <input type="number" id="defaultCommission" min="0" max="100" step="0.1" placeholder="Ej: 30" style="width:100px;">
                         <span style="color:var(--text-muted);">%</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+                        <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; white-space:nowrap;">% IRPF (retención fiscal):</label>
+                        <input type="number" id="defaultIrpf" min="0" max="100" step="0.1" placeholder="Ej: 15" style="width:100px;">
+                        <span style="color:var(--text-muted);">%</span>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">(se aplica sobre el importe cobrado)</span>
                     </div>
                     <div class="table-scroll">
                         <table>
@@ -1731,10 +1737,13 @@
             const hasPrices     = lines.some(l => l.price > 0);
             const hasComm       = lines.some(l => l.commPct > 0);
             const defaultCommPct = commissions['_default'];
+            const irpfPct       = commissions['_irpf'] !== undefined ? commissions['_irpf'] : 0;
+            const hasIrpf       = irpfPct > 0;
             const commNote = defaultCommPct !== undefined ? `% general clínica: ${defaultCommPct}%` : '';
 
             // Serialize line data for the inline script
             const linesJson = JSON.stringify(lines);
+            const irpfPctJson = JSON.stringify(irpfPct);
 
             const doc        = getCurrentDoctor();
             const clinicLogo = localStorage.getItem('clinicLogo');
@@ -1831,6 +1840,7 @@
   .totals-row .val { font-weight:600; }
   .totals-row.pending-row .val { color:#e67e22; }
   .totals-row.ret-row     .val { color:#e74c3c; }
+  .totals-row.irpf-row    .val { color:#8e44ad; }
   .totals-row.net-row { background:#27ae60; }
   .totals-row.net-row .lbl, .totals-row.net-row .val { color:white; font-weight:700; font-size:1rem; }
 
@@ -1900,7 +1910,7 @@
           <span class="val" id="t-pending">— €</span>
         </div>
       </div>
-      <div class="totals-box" id="box-neto" ${!hasComm && !hasPrices ? 'style="display:none"' : ''}>
+      <div class="totals-box" id="box-neto" ${!hasComm && !hasPrices && !hasIrpf ? 'style="display:none"' : ''}>
         <h4>Liquidación</h4>
         <div class="totals-row">
           <span class="lbl">Base (cobrado)</span>
@@ -1910,7 +1920,13 @@
         <div class="totals-row ret-row">
           <span class="lbl">Retención clínica</span>
           <span class="val" id="t-ret">— €</span>
-        </div>
+        </div>` : ''}
+        ${hasIrpf ? `
+        <div class="totals-row irpf-row">
+          <span class="lbl">IRPF (${irpfPct}%)</span>
+          <span class="val" id="t-irpf">— €</span>
+        </div>` : ''}
+        ${hasComm || hasIrpf ? `
         <div class="totals-row net-row">
           <span class="lbl">NETO A PERCIBIR</span>
           <span class="val" id="t-net">— €</span>
@@ -1927,13 +1943,13 @@
   </div>
 
   <script>
-    const LINES = ${linesJson};
+    const LINES    = ${linesJson};
+    const IRPF_PCT = ${irpfPctJson};
 
     function fmt(n) { return n.toFixed(2) + ' €'; }
 
     function recalc() {
       let totalCobradoEur = 0, totalPending = 0, totalRet = 0, totalNet = 0;
-      let totalPacCobrados = 0, totalPacPendientes = 0;
 
       LINES.forEach((l, i) => {
         const input      = document.getElementById('cobrado-' + i);
@@ -1969,12 +1985,17 @@
         totalNet        += net;
       });
 
+      const totalIrpf   = totalCobradoEur * IRPF_PCT / 100;
+      const totalNetFinal = totalNet - totalIrpf;
+
       document.getElementById('t-cobrado').textContent = fmt(totalCobradoEur);
       document.getElementById('t-pending').textContent = totalPending > 0.005 ? fmt(totalPending) : '0.00 €';
       document.getElementById('t-base').textContent    = fmt(totalCobradoEur);
       const tRet = document.getElementById('t-ret');
       if (tRet) tRet.textContent = '− ' + fmt(totalRet);
-      document.getElementById('t-net').textContent     = fmt(totalNet);
+      const tIrpf = document.getElementById('t-irpf');
+      if (tIrpf) tIrpf.textContent = '− ' + fmt(totalIrpf);
+      document.getElementById('t-net').textContent = fmt(totalNetFinal);
     }
 
     // Run on load
@@ -2041,6 +2062,9 @@
             const defVal = commissions['_default'] !== undefined ? commissions['_default'] : '';
             document.getElementById('defaultCommission').value = defVal;
 
+            const irpfVal = commissions['_irpf'] !== undefined ? commissions['_irpf'] : '';
+            document.getElementById('defaultIrpf').value = irpfVal;
+
             document.getElementById('configTableBody').innerHTML = CATEGORIES.map(cat => `
                 <tr class="category-row">
                     <td>${cat}</td>
@@ -2066,6 +2090,9 @@
 
             const defComm = parseFloat(document.getElementById('defaultCommission').value);
             if (!isNaN(defComm) && defComm >= 0) commissions['_default'] = defComm;
+
+            const defIrpf = parseFloat(document.getElementById('defaultIrpf').value);
+            if (!isNaN(defIrpf) && defIrpf >= 0) commissions['_irpf'] = defIrpf;
 
             CATEGORIES.forEach(cat => {
                 const price = parseFloat(document.getElementById(`price_${catId(cat)}`).value);
