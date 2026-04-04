@@ -432,9 +432,20 @@ tbody tr:hover { background: #f8fafc; }
     .pill { padding: 6px 11px; font-size: 0.8rem; }
 
     /* ── Configuración ── */
-    .irpf-hint { display: none; }
+    .config-layout { grid-template-columns: 1fr; gap: 16px; }
     .data-layout { grid-template-columns: 1fr; }
-    .config-layout { grid-template-columns: 1fr; }
+
+    /* Filas % comisión e IRPF: wrap en 2 líneas */
+    .config-pct-row { flex-wrap: wrap; row-gap: 6px; }
+    .config-pct-row label { white-space: normal !important; width: 100%; margin-bottom: 0; }
+
+    /* Formulario añadir médico: 1 columna */
+    .new-doctor-grid { grid-template-columns: 1fr !important; }
+
+    /* Tabla doctor manager: compacta */
+    #doctorMgrContent th, #doctorMgrContent td { padding: 8px 8px; font-size: 0.82rem; }
+
+    .irpf-hint { display: none; }
     .radio-group { flex-direction: column; gap: 10px; }
 
     /* ── Botones y formularios ── */
