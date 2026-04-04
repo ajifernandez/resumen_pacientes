@@ -1794,28 +1794,30 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Payment Order ${orderNum}</title>
 <style>
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
-  body { background:#f4f6fb; padding:30px; color:#222; font-size:16px; }
-  .page { background:white; max-width:1400px; margin:0 auto; padding:50px 50px 40px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
+  body { background:#f4f6fb; padding:20px; color:#222; font-size:15px; }
+  .page { background:white; max-width:1000px; margin:0 auto; padding:36px 36px 32px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
 
-  .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; padding-bottom:24px; border-bottom:3px solid #667eea; }
-  .inv-from { line-height:1.7; font-size:0.95rem; color:#444; }
-  .inv-clinic { font-size:1.5rem; font-weight:700; color:#222; margin-bottom:4px; }
-  .inv-meta { text-align:right; }
-  .inv-num { font-size:1.8rem; font-weight:700; color:#667eea; }
-  .inv-date, .inv-period { font-size:0.9rem; color:#666; margin-top:4px; }
-  .inv-comm-note { font-size:0.85rem; color:#764ba2; margin-top:6px; font-weight:600; }
+  .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; padding-bottom:20px; border-bottom:3px solid #667eea; gap:16px; }
+  .inv-from { line-height:1.7; font-size:0.9rem; color:#444; }
+  .inv-clinic { font-size:1.35rem; font-weight:700; color:#222; margin-bottom:4px; }
+  .inv-meta { text-align:right; flex-shrink:0; }
+  .inv-num { font-size:1.6rem; font-weight:700; color:#667eea; }
+  .inv-date, .inv-period { font-size:0.85rem; color:#666; margin-top:4px; }
+  .inv-comm-note { font-size:0.82rem; color:#764ba2; margin-top:6px; font-weight:600; }
 
-  .inv-title { font-size:1.1rem; font-weight:600; color:#555; margin-bottom:8px; letter-spacing:0.5px; text-transform:uppercase; }
-  .inv-subtitle { font-size:0.88rem; color:#888; margin-bottom:20px; }
+  .inv-title { font-size:1rem; font-weight:600; color:#555; margin-bottom:6px; letter-spacing:0.5px; text-transform:uppercase; }
+  .inv-subtitle { font-size:0.82rem; color:#888; margin-bottom:16px; }
 
-  table { width:100%; border-collapse:collapse; margin-bottom:30px; font-size:0.95rem; }
+  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:24px; }
+  table { width:100%; border-collapse:collapse; font-size:0.88rem; white-space:nowrap; }
   thead tr { background:#667eea; color:white; }
-  th { padding:12px 14px; text-align:left; font-weight:600; }
+  th { padding:10px 10px; text-align:left; font-weight:600; }
   th.num { text-align:right; }
-  td { padding:11px 14px; border-bottom:1px solid #eee; vertical-align:middle; }
+  td { padding:9px 10px; border-bottom:1px solid #eee; vertical-align:middle; }
   td.num { text-align:right; }
   td.gross   { color:#2c3e50; }
   td.pending { color:#e67e22; font-weight:600; }
@@ -1825,16 +1827,16 @@
   tr.fully-paid td { background:#f0fff4; }
   tr.has-pending td { background:#fff8f0; }
 
-  .cobrado-input { width:80px; padding:6px 10px; border:2px solid #ddd; border-radius:8px; font-size:0.95rem; text-align:right; transition:border-color 0.2s; }
+  .cobrado-input { width:72px; padding:5px 8px; border:2px solid #ddd; border-radius:8px; font-size:0.88rem; text-align:right; transition:border-color 0.2s; }
   .cobrado-input:focus { outline:none; border-color:#667eea; }
   .cobrado-input.partial { border-color:#e67e22; background:#fff8f0; }
   .cobrado-input.full    { border-color:#27ae60; background:#f0fff4; }
   .cobrado-print { display:none; }
 
-  .totals-area { display:flex; gap:20px; justify-content:flex-end; margin-bottom:30px; flex-wrap:wrap; }
-  .totals-box { min-width:300px; border:2px solid #eee; border-radius:10px; overflow:hidden; }
-  .totals-box h4 { padding:10px 16px; background:#f8f9ff; color:#667eea; font-size:0.85rem; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid #eee; }
-  .totals-row { display:flex; justify-content:space-between; padding:10px 16px; font-size:0.95rem; }
+  .totals-area { display:flex; gap:16px; justify-content:flex-end; margin-bottom:24px; flex-wrap:wrap; }
+  .totals-box { min-width:260px; flex:1; max-width:340px; border:2px solid #eee; border-radius:10px; overflow:hidden; }
+  .totals-box h4 { padding:9px 14px; background:#f8f9ff; color:#667eea; font-size:0.82rem; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid #eee; }
+  .totals-row { display:flex; justify-content:space-between; padding:9px 14px; font-size:0.9rem; }
   .totals-row:not(:last-child) { border-bottom:1px solid #eee; }
   .totals-row .lbl { color:#555; }
   .totals-row .val { font-weight:600; }
@@ -1842,24 +1844,41 @@
   .totals-row.ret-row     .val { color:#e74c3c; }
   .totals-row.irpf-row    .val { color:#8e44ad; }
   .totals-row.net-row { background:#27ae60; }
-  .totals-row.net-row .lbl, .totals-row.net-row .val { color:white; font-weight:700; font-size:1rem; }
+  .totals-row.net-row .lbl, .totals-row.net-row .val { color:white; font-weight:700; font-size:0.95rem; }
 
-  .inv-footer { margin-top:20px; padding-top:20px; border-top:1px solid #eee; font-size:0.8rem; color:#aaa; text-align:center; }
+  .inv-footer { margin-top:16px; padding-top:16px; border-top:1px solid #eee; font-size:0.78rem; color:#aaa; text-align:center; }
 
-  .print-bar { max-width:1400px; margin:0 auto 20px; display:flex; gap:10px; align-items:center; }
-  .print-bar .hint { font-size:0.9rem; color:#888; margin-left:8px; }
-  .btn-print { padding:10px 22px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; }
+  .print-bar { max-width:1000px; margin:0 auto 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .print-bar .hint { font-size:0.85rem; color:#888; margin-left:4px; }
+  .btn-print { padding:10px 20px; background:#667eea; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.95rem; }
   .btn-print:hover { background:#5568d3; }
-  .btn-close { padding:10px 22px; background:#e74c3c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:1rem; }
+  .btn-close { padding:10px 20px; background:#e74c3c; color:white; border:none; border-radius:8px; cursor:pointer; font-size:0.95rem; }
+
+  @media (max-width: 600px) {
+    body { padding:10px; font-size:14px; }
+    .page { padding:20px 14px 20px; border-radius:8px; }
+    .inv-header { flex-direction:column; gap:12px; margin-bottom:20px; }
+    .inv-meta { text-align:left; }
+    .inv-num { font-size:1.3rem; }
+    .totals-area { flex-direction:column; }
+    .totals-box { max-width:100%; }
+    .print-bar .hint { display:none; }
+  }
 
   @media print {
-    @page { size: A4 landscape; margin: 10mm; }
-    body { background:white; padding:0; }
-    .page { box-shadow:none; border-radius:0; padding:20px; max-width:100%; }
+    @page { size: A4 portrait; margin: 10mm; }
+    body { background:white; padding:0; font-size:11px; }
+    .page { box-shadow:none; border-radius:0; padding:0; max-width:100%; }
     .print-bar { display:none; }
+    .table-wrap { overflow:visible; }
+    table { font-size:0.78rem; }
+    th, td { padding:5px 6px; }
     .cobrado-input { display:none !important; }
     .cobrado-print { display:inline !important; }
-    tr.fully-paid td, tr.has-pending td { background:white !important; }
+    tr.fully-paid td, tr.has-pending td { background:white !important; -webkit-print-color-adjust:exact; }
+    .totals-area { gap:10px; }
+    .totals-box { min-width:200px; }
+    .inv-header { margin-bottom:16px; padding-bottom:12px; }
   }
 </style>
 </head>
@@ -1873,6 +1892,7 @@
     ${headerHtml}
     <div class="inv-title">Payment Order — ${monthLabel}</div>
     <div class="inv-subtitle">Edita la columna "Pac. cobrados" para indicar cuántos pacientes ha pagado ya cada compañía.</div>
+    <div class="table-wrap">
     <table>
       <thead>
         <tr>
@@ -1890,6 +1910,7 @@
       </thead>
       <tbody>${rowsHtml}</tbody>
     </table>
+    </div>
     <div class="totals-area">
       <div class="totals-box" id="box-cobros">
         <h4>Cobros</h4>
