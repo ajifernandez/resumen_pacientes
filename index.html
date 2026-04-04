@@ -57,12 +57,12 @@
                     </div>
                     <!-- Right: sticky summary -->
                     <div class="daily-sidebar">
-                        <div class="day-total" style="flex-direction:column; align-items:stretch; gap:8px;">
-                            <span style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">Total del día</span>
+                        <div class="day-total daily-total-box" style="flex-direction:column; align-items:stretch; gap:8px;">
+                            <span class="daily-total-label" style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">Total del día</span>
                             <span class="total-value" id="dayTotal" style="font-size:3rem; text-align:center; padding:12px 0;">0</span>
-                            <span style="font-size:0.85rem; color:var(--text-muted); text-align:center;">pacientes</span>
+                            <span class="daily-total-unit" style="font-size:0.85rem; color:var(--text-muted); text-align:center;">pacientes</span>
                         </div>
-                        <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+                        <div class="daily-save-box" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
                             <button class="btn btn-success" style="width:100%; justify-content:center;" onclick="saveDay()">💾 Guardar Día</button>
                             <span id="saveMsg" class="save-msg" style="display:none; text-align:center;"></span>
                         </div>
@@ -297,7 +297,7 @@
                         <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; white-space:nowrap;">% IRPF (retención fiscal):</label>
                         <input type="number" id="defaultIrpf" min="0" max="100" step="0.1" placeholder="Ej: 15" style="width:100px;">
                         <span style="color:var(--text-muted);">%</span>
-                        <span style="font-size:0.8rem; color:var(--text-muted);">(se aplica sobre el importe cobrado)</span>
+                        <span class="irpf-hint" style="font-size:0.8rem; color:var(--text-muted);">(se aplica sobre el importe cobrado)</span>
                     </div>
                     <div class="table-scroll">
                         <table>
