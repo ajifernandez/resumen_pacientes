@@ -36,6 +36,7 @@
             <button class="tab"         onclick="showTab('stats',  this)">📊 Estadísticas</button>
             <button class="tab"         onclick="showTab('history',this)">📋 Historial</button>
             <button class="tab"         onclick="showTab('global', this)">🌐 Global</button>
+            <button class="tab"         onclick="showTab('compare',this)">⚖️ Comparar</button>
             <button class="tab"         onclick="showTab('data',   this)">💾 Datos</button>
             <button class="tab"         onclick="showTab('config', this)">⚙️ Configuración</button>
         </div>
@@ -173,6 +174,55 @@
                     <h2>Vista Global — Todos los Médicos</h2>
                 </div>
                 <div id="globalContent"></div>
+            </div>
+        </div>
+
+        <!-- ── Compare View ──────────────────────────────────────────────── -->
+        <div id="compare-tab" style="display:none;">
+            <div class="card">
+                <div class="month-header">
+                    <h2>⚖️ Comparar</h2>
+                </div>
+                <div class="compare-controls">
+                    <div class="compare-side">
+                        <h3>Lado A</h3>
+                        <div class="input-group" style="flex-direction:column; align-items:stretch; gap:10px;">
+                            <div>
+                                <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:4px; display:block;">Médico</label>
+                                <select id="compareDocA" class="doctor-select" onchange="updateCompare()" style="width:100%;"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:4px; display:block;">Mes</label>
+                                <select id="compareMonthA" class="doctor-select" onchange="updateCompare()" style="width:100%;"></select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="compare-divider">↔</div>
+                    <div class="compare-side">
+                        <h3>Lado B</h3>
+                        <div class="input-group" style="flex-direction:column; align-items:stretch; gap:10px;">
+                            <div>
+                                <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:4px; display:block;">Médico</label>
+                                <select id="compareDocB" class="doctor-select" onchange="updateCompare()" style="width:100%;"></select>
+                            </div>
+                            <div>
+                                <label style="font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:4px; display:block;">Mes</label>
+                                <select id="compareMonthB" class="doctor-select" onchange="updateCompare()" style="width:100%;"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="compareResults"></div>
+                <div class="compare-chart-container" style="margin-top:30px;">
+                    <div class="chart-wrapper-full">
+                        <div class="chart-canvas-wrap"><canvas id="compareLineChart"></canvas></div>
+                        <div class="chart-legend" id="legend-compareLineChart"></div>
+                    </div>
+                    <div class="chart-wrapper-full">
+                        <div class="chart-canvas-wrap"><canvas id="compareAnnualChart"></canvas></div>
+                        <div class="chart-legend" id="legend-compareAnnualChart"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -403,7 +453,7 @@
         })();
         let COLORS = CATEGORIES.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]);
 
-        let pieChart, barChart, lineChart, annualChart;
+        let pieChart, barChart, lineChart, annualChart, compareLineChart, compareAnnualChart;
         const chartMap = {};
 
         // ── Dynamic categories ────────────────────────────────────────────────
@@ -469,7 +519,7 @@
             refreshCategories();
             initDailyTable();
             loadDayData();
-            updateMonthSelects('monthly');
+            updateGlobalMonthSelect();
             loadMonthlyData();
             _pendingCategories = null;
             renderCategoryList();
@@ -564,7 +614,7 @@
             refreshCategories();
             initDailyTable();
             loadDayData();
-            updateMonthSelects('monthly');
+            updateGlobalMonthSelect();
             loadMonthlyData();
             updateHeader();
             updateDoctorBar();
@@ -738,27 +788,15 @@
                 </tr></thead><tbody>`;
             let tPac = 0, tGross = 0, tRet = 0, tNet = 0;
             docs.forEach(doc => {
-                const entries = JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]').filter(e => e.date.startsWith(month));
-                const basePrices = JSON.parse(localStorage.getItem(`clinicPrices_${doc.id}`)  || '{}');
-                const overridesAll = JSON.parse(localStorage.getItem(`clinicPriceOverrides_${doc.id}`) || '{}');
-                const prices = { ...basePrices, ...(overridesAll[month] || {}) };
-                const comms   = JSON.parse(localStorage.getItem(`clinicCommissions_${doc.id}`) || '{}');
-                const pac = entries.reduce((s, e) => s + e.count, 0);
-                let gross = 0, ret = 0;
-                entries.forEach(e => {
-                    const g = e.count * (prices[e.category] || 0);
-                    const pct = comms[e.category] !== undefined ? comms[e.category] : (comms['_default'] || 0);
-                    gross += g; ret += g * pct / 100;
-                });
-                const net = gross - ret;
-                tPac += pac; tGross += gross; tRet += ret; tNet += net;
+                const st = getDoctorMonthStats(doc.id, month);
+                tPac += st.pacientes; tGross += st.bruto; tRet += st.retencion; tNet += st.neto;
                 html += `<tr>
                     <td><strong>${doc.name}</strong></td>
                     <td>${doc.specialty || '—'}</td>
-                    <td style="text-align:right;">${pac}</td>
-                    <td style="text-align:right;">${gross > 0 ? gross.toFixed(2) + ' €' : '—'}</td>
-                    <td style="text-align:right; color:#e74c3c;">${ret > 0 ? '− ' + ret.toFixed(2) + ' €' : '—'}</td>
-                    <td style="text-align:right; color:#27ae60; font-weight:700;">${net > 0 ? net.toFixed(2) + ' €' : '—'}</td>
+                    <td style="text-align:right;">${st.pacientes}</td>
+                    <td style="text-align:right;">${st.bruto > 0 ? st.bruto.toFixed(2) + ' €' : '—'}</td>
+                    <td style="text-align:right; color:#e74c3c;">${st.retencion > 0 ? '− ' + st.retencion.toFixed(2) + ' €' : '—'}</td>
+                    <td style="text-align:right; color:#27ae60; font-weight:700;">${st.neto > 0 ? st.neto.toFixed(2) + ' €' : '—'}</td>
                 </tr>`;
             });
             html += `<tr style="background:#f8fafc; font-weight:700; border-top:2px solid #e2e8f0;">
@@ -770,6 +808,290 @@
             </tr>`;
             html += `</tbody></table></div>`;
             el.innerHTML = html;
+        }
+
+        function getDoctorMonthStats(doctorId, month) {
+            const result = { pacientes: 0, bruto: 0, retencion: 0, neto: 0 };
+            if (!month) return result;
+            if (doctorId === '_all') {
+                const docs = getDoctors();
+                docs.forEach(doc => {
+                    const st = getDoctorMonthStats(doc.id, month);
+                    result.pacientes += st.pacientes;
+                    result.bruto += st.bruto;
+                    result.retencion += st.retencion;
+                    result.neto += st.neto;
+                });
+                return result;
+            }
+            const entries = JSON.parse(localStorage.getItem(`clinicEntries_${doctorId}`) || '[]').filter(e => e.date.startsWith(month));
+            const basePrices = JSON.parse(localStorage.getItem(`clinicPrices_${doctorId}`) || '{}');
+            const overridesAll = JSON.parse(localStorage.getItem(`clinicPriceOverrides_${doctorId}`) || '{}');
+            const prices = { ...basePrices, ...(overridesAll[month] || {}) };
+            const comms = JSON.parse(localStorage.getItem(`clinicCommissions_${doctorId}`) || '{}');
+            result.pacientes = entries.reduce((s, e) => s + e.count, 0);
+            entries.forEach(e => {
+                const g = e.count * (prices[e.category] || 0);
+                const pct = comms[e.category] !== undefined ? comms[e.category] : (comms['_default'] || 0);
+                result.bruto += g;
+                result.retencion += g * pct / 100;
+            });
+            result.neto = result.bruto - result.retencion;
+            return result;
+        }
+
+        function initCompare() {
+            const docs = getDoctors();
+            const months = getAvailableMonthsAllDoctors().slice(0, 12);
+            const docSelA = document.getElementById('compareDocA');
+            const docSelB = document.getElementById('compareDocB');
+            const monthSelA = document.getElementById('compareMonthA');
+            const monthSelB = document.getElementById('compareMonthB');
+            if (!docSelA || !docSelB || !monthSelA || !monthSelB) return;
+            const curDocId = getCurrentDoctorId();
+            const curMonth = getCurrentMonth();
+            docSelA.innerHTML = `<option value="_all">🌐 Todos los médicos</option>` + docs.map(d =>
+                `<option value="${d.id}" ${d.id === curDocId ? 'selected' : ''}>${d.name}</option>`
+            ).join('');
+            docSelB.innerHTML = docSelA.innerHTML;
+            monthSelA.innerHTML = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
+            monthSelB.innerHTML = monthSelA.innerHTML;
+            const defaultMonthB = months[1] || curMonth;
+            monthSelA.value = curMonth;
+            monthSelB.value = defaultMonthB;
+            updateCompare();
+        }
+
+        function updateCompare() {
+            const docIdA = document.getElementById('compareDocA').value;
+            const docIdB = document.getElementById('compareDocB').value;
+            const monthA = document.getElementById('compareMonthA').value;
+            const monthB = document.getElementById('compareMonthB').value;
+            const stA = getDoctorMonthStats(docIdA, monthA);
+            const stB = getDoctorMonthStats(docIdB, monthB);
+            const docs = getDoctors();
+            const labelA = docIdA === '_all' ? 'Todos' : (docs.find(d => d.id === docIdA)?.name || '—');
+            const labelB = docIdB === '_all' ? 'Todos' : (docs.find(d => d.id === docIdB)?.name || '—');
+            const labelMonthA = formatMonth(monthA);
+            const labelMonthB = formatMonth(monthB);
+            const renderDiff = (valA, valB, isPct) => {
+                if (valA === 0 && valB === 0) return '<span class="compare-diff diff-neutral">—</span>';
+                const diff = valB - valA;
+                if (isPct && valA > 0) {
+                    const pct = (diff / valA) * 100;
+                    const cls = pct > 0 ? 'diff-positive' : (pct < 0 ? 'diff-negative' : 'diff-neutral');
+                    const symbol = pct > 0 ? '+' : '';
+                    return `<span class="compare-diff ${cls}">${symbol}${pct.toFixed(1)}%</span>`;
+                }
+                if (valA === 0) {
+                    return '<span class="compare-diff diff-neutral">—</span>';
+                }
+                const pctVal = (diff / valA) * 100;
+                const cls = pctVal > 0 ? 'diff-positive' : (pctVal < 0 ? 'diff-negative' : 'diff-neutral');
+                const symbol = pctVal > 0 ? '+' : '';
+                return `<span class="compare-diff ${cls}">${symbol}${pctVal.toFixed(1)}%</span>`;
+            };
+            const fmt = (v) => v > 0 ? v.toFixed(2) + ' €' : '—';
+            const html = `
+                <div class="compare-results-grid">
+                    <div class="compare-col">
+                        <div class="compare-col-header">
+                            <strong>${labelA}</strong>
+                            <span style="color:var(--text-muted); font-size:0.9rem;">${labelMonthA}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Pacientes</span>
+                            <span class="compare-stat-val">${stA.pacientes}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Ingresos Brutos</span>
+                            <span class="compare-stat-val">${fmt(stA.bruto)}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Retención</span>
+                            <span class="compare-stat-val" style="color:#e74c3c;">${stA.retencion > 0 ? '− ' + fmt(stA.retencion) : '—'}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Neto</span>
+                            <span class="compare-stat-val" style="color:#27ae60; font-weight:700;">${fmt(stA.neto)}</span>
+                        </div>
+                    </div>
+                    <div class="compare-col">
+                        <div class="compare-col-header">
+                            <strong>${labelB}</strong>
+                            <span style="color:var(--text-muted); font-size:0.9rem;">${labelMonthB}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Pacientes</span>
+                            <span class="compare-stat-val">${stB.pacientes}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Ingresos Brutos</span>
+                            <span class="compare-stat-val">${fmt(stB.bruto)}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Retención</span>
+                            <span class="compare-stat-val" style="color:#e74c3c;">${stB.retencion > 0 ? '− ' + fmt(stB.retencion) : '—'}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Neto</span>
+                            <span class="compare-stat-val" style="color:#27ae60; font-weight:700;">${fmt(stB.neto)}</span>
+                        </div>
+                    </div>
+                    <div class="compare-col compare-diff-col">
+                        <div class="compare-col-header">
+                            <strong>Diferencia</strong>
+                            <span style="color:var(--text-muted); font-size:0.9rem;">B − A</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Pacientes</span>
+                            <span class="compare-stat-val">${stB.pacientes - stA.pacientes} ${renderDiff(stA.pacientes, stB.pacientes, false)}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Ingresos Brutos</span>
+                            <span class="compare-stat-val">${fmt(stB.bruto - stA.bruto)} ${renderDiff(stA.bruto, stB.bruto, true)}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Retención</span>
+                            <span class="compare-stat-val" style="color:#e74c3c;">${stB.retencion - stA.retencion !== 0 ? (stB.retencion > stA.retencion ? '+' : '') + (stB.retencion - stA.retencion).toFixed(2) + ' €' : '—'} ${renderDiff(stA.retencion, stB.retencion, true)}</span>
+                        </div>
+                        <div class="compare-stat-row">
+                            <span class="compare-stat-label">Neto</span>
+                            <span class="compare-stat-val" style="color:#27ae60; font-weight:700;">${fmt(stB.neto - stA.neto)} ${renderDiff(stA.neto, stB.neto, true)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('compareResults').innerHTML = html;
+            updateCompareCharts(docIdA, monthA, docIdB, monthB);
+        }
+
+        function getDoctorDayData(doctorId, month) {
+            const entries = doctorId === '_all'
+                ? getDoctors().flatMap(doc => JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]').filter(e => e.date.startsWith(month)))
+                : JSON.parse(localStorage.getItem(`clinicEntries_${doctorId}`) || '[]').filter(e => e.date.startsWith(month));
+            const [y, m] = month.split('-').map(Number);
+            const daysInMonth = new Date(y, m, 0).getDate();
+            const dayTotals = [];
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStr = String(d).padStart(2, '0');
+                const total = entries.filter(e => e.date.slice(-2) === dayStr).reduce((s, e) => s + e.count, 0);
+                dayTotals.push(total);
+            }
+            return dayTotals;
+        }
+
+        function updateCompareCharts(docIdA, monthA, docIdB, monthB) {
+            if (compareLineChart) compareLineChart.destroy();
+
+            const docs = getDoctors();
+            const labelA = docIdA === '_all' ? 'Todos' : (docs.find(d => d.id === docIdA)?.name || 'Lado A');
+            const labelB = docIdB === '_all' ? 'Todos' : (docs.find(d => d.id === docIdB)?.name || 'Lado B');
+
+            const colorsA = 'rgba(79, 70, 229, 0.7)';
+            const colorsB = 'rgba(16, 185, 129, 0.7)';
+
+            const dayDataA = getDoctorDayData(docIdA, monthA);
+            const dayDataB = getDoctorDayData(docIdB, monthB);
+            const maxDays = Math.max(dayDataA.length, dayDataB.length);
+            const labels = Array.from({ length: maxDays }, (_, i) => String(i + 1));
+
+            compareLineChart = new Chart(document.getElementById('compareLineChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: `${labelA} (${formatMonth(monthA)})`,
+                            data: dayDataA,
+                            backgroundColor: colorsA,
+                            stack: 'stack0'
+                        },
+                        {
+                            label: `${labelB} (${formatMonth(monthB)})`,
+                            data: dayDataB,
+                            backgroundColor: colorsB,
+                            stack: 'stack0'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Pacientes por Día del Mes' }
+                    },
+                    scales: {
+                        x: { stacked: false },
+                        y: { beginAtZero: true, stacked: false, title: { display: true, text: 'Pacientes' } }
+                    }
+                }
+            });
+            chartMap['compareLineChart'] = compareLineChart;
+            renderLegend(compareLineChart, 'legend-compareLineChart');
+
+            if (compareAnnualChart) compareAnnualChart.destroy();
+            const now = new Date();
+            const commonLabels = [], monthKeysA = [], monthKeysB = [], catDataByMonthA = {}, catDataByMonthB = {};
+            CATEGORIES.forEach(cat => { catDataByMonthA[cat] = []; catDataByMonthB[cat] = []; });
+
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const ms = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                commonLabels.push(d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }));
+                monthKeysA.push(ms);
+                monthKeysB.push(ms);
+
+                const entriesA = docIdA === '_all'
+                    ? getDoctors().flatMap(doc => JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]').filter(e => e.date.startsWith(ms)))
+                    : JSON.parse(localStorage.getItem(`clinicEntries_${docIdA}`) || '[]').filter(e => e.date.startsWith(ms));
+                CATEGORIES.forEach(cat => {
+                    const ct = entriesA.filter(e => e.category === cat).reduce((s, e) => s + e.count, 0);
+                    catDataByMonthA[cat].push(ct);
+                });
+
+                const entriesB = docIdB === '_all'
+                    ? getDoctors().flatMap(doc => JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]').filter(e => e.date.startsWith(ms)))
+                    : JSON.parse(localStorage.getItem(`clinicEntries_${docIdB}`) || '[]').filter(e => e.date.startsWith(ms));
+                CATEGORIES.forEach(cat => {
+                    const ct = entriesB.filter(e => e.category === cat).reduce((s, e) => s + e.count, 0);
+                    catDataByMonthB[cat].push(ct);
+                });
+            }
+
+            compareAnnualChart = new Chart(document.getElementById('compareAnnualChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: commonLabels,
+                    datasets: [
+                        ...CATEGORIES.slice(0, 6).map((cat, i) => ({
+                            label: `${labelA} - ${cat}`,
+                            data: catDataByMonthA[cat] || [],
+                            backgroundColor: COLORS[i % COLORS.length],
+                            stack: 'stackA'
+                        })),
+                        ...CATEGORIES.slice(0, 6).map((cat, i) => ({
+                            label: `${labelB} - ${cat}`,
+                            data: catDataByMonthB[cat] || [],
+                            backgroundColor: COLORS[(i + 6) % COLORS.length],
+                            stack: 'stackB'
+                        }))
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'Resumen Anual Comparativo (últimos 12 meses)' }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Mes' } },
+                        y: { beginAtZero: true, title: { display: true, text: 'Pacientes' } }
+                    }
+                }
+            });
+            chartMap['compareAnnualChart'] = compareAnnualChart;
+            renderLegend(compareAnnualChart, 'legend-compareAnnualChart');
         }
 
         function renderLegend(chart, containerId) {
@@ -922,7 +1244,7 @@
         updateDoctorBar();
         initDailyTable();
         loadDayData();
-        updateMonthSelects('monthly');
+        updateGlobalMonthSelect();
         loadMonthlyData();
         updateHeader();
 
@@ -967,7 +1289,7 @@
                 if(selector) selector.classList.remove('expanded');
             }
 
-            ['daily','monthly','stats','history','global','data','config'].forEach(t => {
+            ['daily','monthly','stats','history','global','compare','data','config'].forEach(t => {
                 document.getElementById(`${t}-tab`).style.display = (t === tab) ? 'block' : 'none';
             });
 
@@ -976,6 +1298,7 @@
             if      (tab === 'stats')   { updateStats();   }
             else if (tab === 'history') { updateHistory(); }
             else if (tab === 'global')  { updateGlobal(); }
+            else if (tab === 'compare') { initCompare(); }
             else if (tab === 'data')    { updateDataTab(); }
             else if (tab === 'config')  { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); renderDoctorManager(); }
             else if (tab === 'daily')   { loadDayData(); }
@@ -2024,7 +2347,7 @@
 <style>
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; }
   body { background:#f4f6fb; padding:20px; color:#222; font-size:15px; }
-  .page { background:white; max-width:1000px; margin:0 auto; padding:36px 36px 32px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
+  .page { background:white; max-width:1200px; margin:0 auto; padding:36px 40px 32px; border-radius:12px; box-shadow:0 4px 30px rgba(0,0,0,0.12); }
 
   .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; padding-bottom:20px; border-bottom:3px solid #667eea; gap:16px; }
   .inv-from { line-height:1.7; font-size:0.9rem; color:#444; }
