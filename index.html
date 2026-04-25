@@ -685,18 +685,19 @@
             }
             el.innerHTML = `<div class="table-scroll"><table>
                 <thead><tr>
-                    <th>Nombre</th><th>Especialidad</th><th>NIF</th><th>Teléfono</th><th style="width:160px;">Acciones</th>
+                    <th>Nombre</th><th>Especialidad</th><th>NIF</th><th>Teléfono</th><th style="width:100px;">Acciones</th>
                 </tr></thead>
                 <tbody>
                 ${docs.map(d => `
                     <tr ${d.id === curId ? 'style="background:#f0f4ff;"' : ''}>
-                        <td><strong>${d.name}</strong>${d.id === curId ? ' <span style="color:#4f46e5; font-size:0.75rem;">(activo)</span>' : ''}</td>
-                        <td>${d.specialty || '—'}</td>
-                        <td>${d.nif || '—'}</td>
-                        <td>${d.phone || '—'}</td>
+                        <td><input type="text" id="docName_${d.id}" value="${(d.name || '').replace(/"/g, '&quot;')}" style="width:100%; padding:8px 10px; font-size:0.9rem; font-weight:600;"></td>
+                        <td><input type="text" id="docSpecialty_${d.id}" value="${(d.specialty || '').replace(/"/g, '&quot;')}" style="width:100%; padding:8px 10px; font-size:0.9rem;"></td>
+                        <td><input type="text" id="docNif_${d.id}" value="${(d.nif || '').replace(/"/g, '&quot;')}" style="width:100%; padding:8px 10px; font-size:0.9rem;"></td>
+                        <td><input type="text" id="docPhone_${d.id}" value="${(d.phone || '').replace(/"/g, '&quot;')}" style="width:100%; padding:8px 10px; font-size:0.9rem;"></td>
                         <td>
-                            <div style="display:flex; gap:6px;">
-                                <button class="btn btn-outline btn-sm" onclick="switchDoctor('${d.id}')">Seleccionar</button>
+                            <div style="display:flex; gap:4px;">
+                                <button class="btn btn-success btn-sm" onclick="saveDoctorData('${d.id}')" title="Guardar cambios">💾</button>
+                                <button class="btn btn-outline btn-sm" onclick="switchDoctor('${d.id}')" ${d.id === curId ? 'disabled' : ''}>${d.id === curId ? '✓' : '↩'}</button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteDoctor('${d.id}')" ${docs.length === 1 ? 'disabled' : ''}>×</button>
                             </div>
                         </td>
@@ -704,6 +705,26 @@
                 `).join('')}
                 </tbody>
             </table></div>`;
+        }
+
+        function saveDoctorData(id) {
+            const docs = getDoctors();
+            const doc = docs.find(d => d.id === id);
+            if (!doc) return;
+            const name = (document.getElementById(`docName_${id}`).value || '').trim();
+            const specialty = (document.getElementById(`docSpecialty_${id}`).value || '').trim();
+            const nif = (document.getElementById(`docNif_${id}`).value || '').trim();
+            const phone = (document.getElementById(`docPhone_${id}`).value || '').trim();
+            if (!name) { toast('El nombre es obligatorio', 'warning'); return; }
+            doc.name = name;
+            doc.specialty = specialty;
+            doc.nif = nif;
+            doc.phone = phone;
+            saveDoctors(docs);
+            updateDoctorBar();
+            updateHeader();
+            renderDoctorManager();
+            toast('Datos del médico actualizados', 'success');
         }
 
         function addDoctor() {
