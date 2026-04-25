@@ -15,11 +15,11 @@
         <h1 id="app-header">🏥 Control de Pacientes</h1>
 
         <div class="doctor-bar" id="doctorBar" style="display:none; gap: 15px; align-items: center; flex-wrap: wrap;">
-            <div style="display:flex; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
                 <span class="doctor-bar-label">Médico:</span>
                 <select id="doctorSelect" class="doctor-select" onchange="switchDoctor(this.value)"></select>
             </div>
-            <div style="display:flex; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
                 <span class="doctor-bar-label">Mes:</span>
                 <select id="globalMonthSelect" class="doctor-select" onchange="onGlobalMonthChange(this.value)"></select>
             </div>
@@ -33,10 +33,10 @@
         <div class="tabs" id="main-tabs">
             <!-- <button class="tab"  onclick="showTab('daily',  this)">📅 Entrada Diaria</button> -->
             <button class="tab active"  onclick="showTab('monthly',this)">🗓️ Entrada Mensual</button>
-            <button class="tab"         onclick="showTab('stats',  this)">📊 Estadísticas</button>
-            <button class="tab"         onclick="showTab('history',this)">📋 Historial</button>
+<button class="tab"  onclick="showTab('stats',  this)">📊 Estadísticas</button>
             <button class="tab"         onclick="showTab('global', this)">🌐 Global</button>
             <button class="tab"         onclick="showTab('compare',this)">⚖️ Comparar</button>
+            <button class="tab"         onclick="showTab('billing', this)">🧾 Facturación</button>
             <button class="tab"         onclick="showTab('data',   this)">💾 Datos</button>
             <button class="tab"         onclick="showTab('config', this)">⚙️ Configuración</button>
         </div>
@@ -101,6 +101,7 @@
                             <span style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">Total del mes</span>
                             <span class="total-value" id="monthTotal" style="font-size:3rem; text-align:center; padding:12px 0;">0</span>
                             <span style="font-size:0.85rem; color:var(--text-muted); text-align:center;">pacientes</span>
+                            <span id="monthDays" style="font-size:0.85rem; color:var(--primary); text-align:center; margin-top:4px;">0 días trabajados</span>
                         </div>
                         <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
                             <button class="btn btn-success" style="width:100%; justify-content:center;" onclick="saveMonth()">💾 Guardar Mes</button>
@@ -144,8 +145,8 @@
             </div>
         </div>
 
-        <!-- ── History ───────────────────────────────────────────────────── -->
-        <div id="history-tab" style="display:none;">
+<!-- ── History (hidden - same as monthly) ───────────────────── -->
+        <!-- <div id="history-tab" style="display:none;">
             <div class="card">
                 <div class="month-header">
                     <h2>Historial de Registros</h2>
@@ -163,9 +164,9 @@
                     </thead>
                     <tbody></tbody>
                 </table>
-                </div><!-- end table-scroll -->
+                </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- ── Global View ──────────────────────────────────────────────── -->
         <div id="global-tab" style="display:none;">
@@ -223,6 +224,24 @@
                         <div class="chart-legend" id="legend-compareAnnualChart"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ── Billing ─────────────────────────────────────────────────────── -->
+        <div id="billing-tab" style="display:none;">
+            <div class="card">
+                <div class="month-header">
+                    <h2>🧾 Facturación</h2>
+                    <div class="month-selector">
+                        <select id="billingMonthSelect" class="doctor-select" onchange="updateBilling()"></select>
+                        <button class="btn" style="background:#2c3e50;" onclick="printBilling()">👁️ Preview</button>
+                        <button class="btn btn-success" onclick="saveBillingData()">💾 Guardar</button>
+                    </div>
+                </div>
+                <div class="info-box">
+                    Introduce los <strong>pacientes facturados</strong> por cada aseguradora (o categoría). Los datos se comparan con los pacientes atendidos para calcular la diferencia.
+                </div>
+                <div id="billingContent"></div>
             </div>
         </div>
 
@@ -1002,6 +1021,157 @@
             return dayTotals;
         }
 
+        // ── Billing ───────────────────────────────────────────────────────
+
+        function initBilling() {
+            const sel = document.getElementById('billingMonthSelect');
+            if (!sel) return;
+            const months = getAvailableMonths();
+            const curMonth = getCurrentMonth();
+            sel.innerHTML = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
+            sel.value = curMonth;
+            updateBilling();
+        }
+
+function updateBilling() {
+            var month = document.getElementById('billingMonthSelect').value;
+            var prices = getEffectivePrices(month);
+            var doctorId = _currentDoctorId || 'doc_default';
+            var billingKey = 'clinicBilling_' + month + '_' + doctorId;
+            var billingData = {};
+            try {
+                billingData = JSON.parse(localStorage.getItem(billingKey)) || {};
+            } catch(e) {}
+
+            var el = document.getElementById('billingContent');
+            var html = '<div class="table-scroll"><table><thead><tr>';
+            html += '<th>Aseguradora</th><th style="text-align:right;">Precio (€)';
+            html += '</th><th style="text-align:right;">Facturados</th><th style="text-align:right;">Total (€)</th>';
+            html += '</tr></thead><tbody>';
+
+            var totalBilled = 0, totalReceived = 0;
+
+            for (var i = 0; i < CATEGORIES.length; i++) {
+                var cat = CATEGORIES[i];
+                var price = prices[cat] || 0;
+                var billedCount = billingData[cat] || 0;
+                var received = billedCount * price;
+
+                totalBilled += billedCount;
+                totalReceived += received;
+
+                html += '<tr><td style="font-weight:600;">' + cat + '</td>';
+                html += '<td style="text-align:right; color:var(--primary);">' + (price > 0 ? price.toFixed(2) : '—') + '</td>';
+                html += '<td style="text-align:right;"><input type="number" id="bill_' + catId(cat) + '" value="' + billedCount + '" min="0" style="width:80px; text-align:center; padding:6px;"></td>';
+                html += '<td style="text-align:right; font-weight:600;">' + (received > 0 ? received.toFixed(2) : '—') + '</td></tr>';
+            }
+
+            html += '<tr style="background:#f0fdfa; font-weight:700; border-top:2px solid #5eead4;">';
+            html += '<td>TOTAL</td><td></td>';
+            html += '<td style="text-align:right;">' + totalBilled + '</td>';
+            html += '<td style="text-align:right;">' + totalReceived.toFixed(2) + '</td>';
+            html += '</tr></tbody></table></div>';
+
+            el.innerHTML = html;
+        }
+
+        function saveBillingData() {
+            var month = document.getElementById('billingMonthSelect').value;
+            var billingData = {};
+            for (var i = 0; i < CATEGORIES.length; i++) {
+                var cat = CATEGORIES[i];
+                var input = document.getElementById('bill_' + catId(cat));
+                if (input && parseInt(input.value) > 0) {
+                    billingData[cat] = parseInt(input.value);
+                }
+            }
+            var doctorId = _currentDoctorId || 'doc_default';
+            localStorage.setItem('clinicBilling_' + month + '_' + doctorId, JSON.stringify(billingData));
+            updateBilling();
+            toast('Datos de facturacion guardados', 'success');
+        }
+
+        function printBilling() {
+            var month = document.getElementById('billingMonthSelect').value;
+            var monthLabel = formatMonth(month);
+            var info = getClinicInfo();
+            var doc = getCurrentDoctor();
+            var clinicLogo = localStorage.getItem('clinicLogo');
+            var prices = getEffectivePrices(month);
+            var doctorId = _currentDoctorId || 'doc_default';
+            var billingKey = 'clinicBilling_' + month + '_' + doctorId;
+            var billingData = {};
+            try { billingData = JSON.parse(localStorage.getItem(billingKey)) || {}; } catch(e) {}
+
+            var totalBilled = 0, totalReceived = 0;
+            var rows = '';
+            for (var i = 0; i < CATEGORIES.length; i++) {
+                var cat = CATEGORIES[i];
+                var price = prices[cat] || 0;
+                var billedCount = billingData[cat] || 0;
+                if (billedCount > 0) {
+                    var received = billedCount * price;
+                    totalBilled += billedCount;
+                    totalReceived += received;
+                    rows += '<tr><td>' + cat + '</td><td class="num">' + price.toFixed(2) + '</td>';
+                    rows += '<td class="num">' + billedCount + '</td>';
+                    rows += '<td class="num">' + received.toFixed(2) + '</td></tr>';
+                }
+            }
+
+            var logoHtml = clinicLogo ? '<img src="' + clinicLogo + '" alt="" style="max-height:50px; max-width:150px; object-fit:contain; margin-bottom:6px; display:block; border-radius:4px;">' : '';
+            var today = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+            var orderNum = 'FAC-' + month.replace('-', '');
+
+            var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Facturacion ' + monthLabel + '</title>';
+            html += '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Tahoma,Verdana,sans-serif}';
+            html += 'body{background:#f4f6fb;padding:20px;color:#222;font-size:15px}';
+            html += '.page{background:white;max-width:1200px;margin:0 auto;padding:36px 40px;border-radius:12px;box-shadow:0 4px 30px rgba(0,0,0,0.12)}';
+            html += '.inv-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:3px solid #667eea;gap:16px}';
+            html += '.inv-from{line-height:1.7;font-size:0.9rem;color:#444}';
+            html += '.inv-clinic{font-size:1.35rem;font-weight:700;color:#222;margin-bottom:4px}';
+            html += '.inv-meta{text-align:right;flex-shrink:0}';
+            html += '.inv-num{font-size:1.6rem;font-weight:700;color:#667eea}';
+            html += '.inv-date,.inv-period{font-size:0.85rem;color:#666;margin-top:4px}';
+            html += '.inv-title{font-size:1rem;font-weight:600;color:#555;margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase}';
+            html += '.inv-subtitle{font-size:0.82rem;color:#888;margin-bottom:16px}';
+            html += 'table{width:100%;border-collapse:collapse;font-size:0.9rem}';
+            html += 'thead tr{background:#f1f5f9;color:#222}';
+            html += 'th{padding:10px 10px;text-align:left;font-weight:600}';
+            html += 'th.num{text-align:right}';
+            html += 'td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:middle}';
+            html += 'td.num{text-align:right}';
+            html += 'tr:last-child{font-weight:700;background:#f0fdfa;border-top:2px solid #5eead4}';
+            html += '.print-bar{max-width:1200px;margin:0 auto 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}';
+            html += '.btn-print{padding:10px 20px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.95rem}';
+            html += '.btn-print:hover{background:#5568d3}';
+            html += '.btn-close{padding:10px 20px;background:#e74c3c;color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.95rem}';
+            html += '@media print{@page{size:A4 portrait;margin:10mm}body{background:white;padding:0}.page{box-shadow:none;border-radius:0;padding:0;max-width:100%}.print-bar{display:none}}';
+            html += '</style></head>';
+            html += '<body>';
+            html += '<div class="print-bar"><button class="btn-print" onclick="window.print()">🖨️ Imprimir</button><button class="btn-close" onclick="window.close()">✕ Cerrar</button></div>';
+            html += '<div class="page">';
+            html += '<div class="inv-header"><div class="inv-from">' + logoHtml + '<div class="inv-clinic">' + (info.name || 'Clinica') + '</div>';
+            if (doc && doc.specialty) html += '<div style="font-size:0.9rem;color:#667eea;font-weight:600;margin-bottom:2px;">' + doc.specialty + '</div>';
+            if (doc && doc.name) html += '<div>' + doc.name + '</div>';
+            if (doc && doc.nif) html += '<div>NIF: ' + doc.nif + '</div>';
+            if (info.address) html += '<div>' + info.address + '</div>';
+            if (doc && doc.phone) html += '<div>Tel: ' + doc.phone + '</div>';
+            html += '</div><div class="inv-meta"><div class="inv-num">' + orderNum + '</div>';
+            html += '<div class="inv-date">Emitida: ' + today + '</div>';
+            html += '<div class="inv-period">Período: ' + monthLabel + '</div></div></div>';
+            html += '<div class="inv-title">Facturación — ' + monthLabel + '</div>';
+            html += '<div class="inv-subtitle">Resumen de pacientes facturados por aseguradora.</div>';
+            html += '<table><thead><tr><th>Aseguradora</th><th class="num">Precio (€)</th><th class="num">Facturados</th><th class="num">Total (€)</th></tr></thead><tbody>';
+            html += rows;
+            html += '<tr><td>TOTAL</td><td></td><td class="num">' + totalBilled + '</td><td class="num">' + totalReceived.toFixed(2) + '</td></tr>';
+            html += '</tbody></table></div></body></html>';
+
+            var win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+        }
+
         function updateCompareCharts(docIdA, monthA, docIdB, monthB) {
             if (compareLineChart) compareLineChart.destroy();
 
@@ -1251,9 +1421,9 @@
         }
 
         function getEffectivePrices(month) {
-            const basePrices = getPrices();
             const overrides = getPriceOverrides()[month] || {};
-            return { ...basePrices, ...overrides };
+            // Return only month-specific prices, no fallback to base prices (preserves historical data)
+            return { ...overrides };
         }
 
 
@@ -1310,7 +1480,7 @@
                 if(selector) selector.classList.remove('expanded');
             }
 
-            ['daily','monthly','stats','history','global','compare','data','config'].forEach(t => {
+            ['daily','monthly','stats','global','compare','billing','data','config'].forEach(t => {
                 document.getElementById(`${t}-tab`).style.display = (t === tab) ? 'block' : 'none';
             });
 
@@ -1320,6 +1490,7 @@
             else if (tab === 'history') { updateHistory(); }
             else if (tab === 'global')  { updateGlobal(); }
             else if (tab === 'compare') { initCompare(); }
+            else if (tab === 'billing') { initBilling(); }
             else if (tab === 'data')    { updateDataTab(); }
             else if (tab === 'config')  { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); renderDoctorManager(); }
             else if (tab === 'daily')   { loadDayData(); }
@@ -1328,9 +1499,13 @@
 
         function onGlobalMonthChange(monthValue) {
             if (document.getElementById('stats-tab').style.display === 'block') updateStats();
-            else if (document.getElementById('history-tab').style.display === 'block') updateHistory();
             else if (document.getElementById('global-tab').style.display === 'block') updateGlobal();
             else if (document.getElementById('monthly-tab').style.display === 'block') loadMonthlyData();
+            else if (document.getElementById('daily-tab').style.display === 'block') loadDayData();
+            else if (document.getElementById('billing-tab').style.display === 'block') updateBilling();
+            else {
+                loadMonthlyData();
+            }
         }
 
         // ── Month selectors ───────────────────────────────────────────────────
@@ -1490,6 +1665,7 @@
             const daysInMonth = new Date(y, m, 0).getDate();
             
             let grandTotal = 0;
+            let daysWorked = 0;
             const catTotals = {};
             CATEGORIES.forEach(cat => catTotals[cat] = 0);
             
@@ -1503,6 +1679,7 @@
                 });
                 const dayEl = document.getElementById(`month_day_total_${d}`);
                 if (dayEl) dayEl.textContent = dayTotal || '';
+                if (dayTotal > 0) daysWorked++;
                 grandTotal += dayTotal;
             }
             
@@ -1515,29 +1692,36 @@
             if (grandEl) grandEl.textContent = grandTotal;
             
             document.getElementById('monthTotal').textContent = grandTotal;
+            document.getElementById('monthDays').textContent = daysWorked + ' días trabajados';
         }
 
         function saveMonth() {
             const month = document.getElementById('globalMonthSelect').value;
             if (!month) { toast('Selecciona un mes', 'warning'); return; }
             
-            // Save price overrides for this month
+            // Save price overrides for this month (always save current displayed prices)
+            const basePrices = getPrices();
             const monthOverrides = {};
-            let hasOverrides = false;
+            let hasAnyPrice = false;
             CATEGORIES.forEach(cat => {
                 const el = document.getElementById(`month_price_${catId(cat)}`);
                 if (el && el.value !== "") {
                     monthOverrides[cat] = parseFloat(el.value);
-                    hasOverrides = true;
+                    hasAnyPrice = true;
+                } else if (basePrices[cat] !== undefined) {
+                    // Use base price as month price if input is empty
+                    monthOverrides[cat] = basePrices[cat];
+                    hasAnyPrice = true;
                 }
             });
             const allOverrides = getPriceOverrides();
-            if (hasOverrides) {
+            if (hasAnyPrice) {
                 allOverrides[month] = monthOverrides;
+                savePriceOverrides(allOverrides);
             } else {
                 delete allOverrides[month];
+                savePriceOverrides(allOverrides);
             }
-            savePriceOverrides(allOverrides);
             
             // Filter out ALL entries for this month
             const entries = getEntries().filter(e => !e.date.startsWith(month));
@@ -2453,7 +2637,7 @@
 </head>
 <body>
   <div class="print-bar">
-    <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
     <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
     <span class="hint">Edita <strong>Pac. cobrados</strong> para indicar cuántos pacientes ha pagado cada compañía.</span>
   </div>
