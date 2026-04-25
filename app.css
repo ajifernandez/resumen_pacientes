@@ -447,3 +447,69 @@ tbody tr:hover { background: #f8fafc; }
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
+
+/* ── Monthly Grid ── */
+.monthly-table th {
+    padding: 4px 2px;
+    text-align: center;
+    font-size: 0.45rem;
+    max-width: 65px;
+    white-space: normal;
+    line-height: 1.1;
+    vertical-align: bottom;
+}
+.monthly-table td {
+    padding: 1px 2px;
+    text-align: center;
+    font-size: 0.8rem;
+    height: 24px;
+}
+.monthly-table th:first-child, .monthly-table td:first-child {
+    position: sticky;
+    left: 0;
+    background: #f8fafc;
+    z-index: 1;
+    font-weight: 600;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.02);
+    min-width: 30px;
+}
+.monthly-table input[type="number"] {
+    width: 44px;
+    padding: 0;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    height: 22px;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+.monthly-table input[type="number"]:hover {
+    border-color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.5);
+}
+.monthly-table input[type="number"]:focus {
+    border-color: var(--primary);
+    background: white;
+}
+/* Hide spin buttons for cleaner look on grid */
+.monthly-table input[type="number"]::-webkit-inner-spin-button, 
+.monthly-table input[type="number"]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+.monthly-table input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.monthly-total-col {
+    background: #f0fdfa !important;
+    font-weight: 700;
+    color: #0f766e;
+}
+.monthly-total-row td {
+    background: #f8fafc;
+    font-weight: 700;
+    border-top: 2px solid #e2e8f0;
+    color: var(--primary);
+}
