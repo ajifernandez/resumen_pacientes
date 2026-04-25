@@ -227,19 +227,18 @@
             </div>
         </div>
 
-        <!-- ── Billing ─────────────────────────────────────────────────────── -->
+<!-- ── Billing ─────────────────────────────────────────────────────── -->
         <div id="billing-tab" style="display:none;">
             <div class="card">
                 <div class="month-header">
                     <h2>🧾 Facturación</h2>
                     <div class="month-selector">
-                        <select id="billingMonthSelect" class="doctor-select" onchange="updateBilling()"></select>
                         <button class="btn" style="background:#2c3e50;" onclick="printBilling()">👁️ Preview</button>
                         <button class="btn btn-success" onclick="saveBillingData()">💾 Guardar</button>
                     </div>
                 </div>
                 <div class="info-box">
-                    Introduce los <strong>pacientes facturados</strong> por cada aseguradora (o categoría). Los datos se comparan con los pacientes atendidos para calcular la diferencia.
+                    Seleccionael rango de meses using the selector superior para ver la сравнение. Edita los pacientes facturados para el mes actuel.
                 </div>
                 <div id="billingContent"></div>
             </div>
@@ -1023,42 +1022,79 @@
 
         // ── Billing ───────────────────────────────────────────────────────
 
-        function initBilling() {
-            const sel = document.getElementById('billingMonthSelect');
-            if (!sel) return;
-            const months = getAvailableMonths();
-            const curMonth = getCurrentMonth();
-            sel.innerHTML = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
-            sel.value = curMonth;
+function initBilling() {
             updateBilling();
         }
 
-function updateBilling() {
-            var month = document.getElementById('billingMonthSelect').value;
-            var prices = getEffectivePrices(month);
+        function updateBilling() {
+            var sel = document.getElementById('globalMonthSelect');
+            if (!sel || !sel.value) {
+                // Wait for globalMonthSelect to be initialized
+                setTimeout(updateBilling, 100);
+                return;
+            }
+            var month = sel.value;
             var doctorId = _currentDoctorId || 'doc_default';
+            
+            // Get totals for all months with data (before current month)
+            var totalAttended = 0;
+            var totalBilled = 0;
+            
+            var allMonths = getAvailableMonths();
+            var currentMonth = month;
+            
+            // Calculate totals from all months before current
+            for (var i = 0; i < allMonths.length; i++) {
+                var m = allMonths[i];
+                if (m < currentMonth) {
+                    // Attended
+                    var entries = JSON.parse(localStorage.getItem('clinicEntries_' + doctorId) || '[]').filter(function(e) { return e.date.startsWith(m); });
+                    totalAttended += entries.reduce(function(s, e) { return s + e.count; }, 0);
+                    
+                    // Billed
+                    var billKey = 'clinicBilling_' + m + '_' + doctorId;
+                    var billData = {};
+                    try { billData = JSON.parse(localStorage.getItem(billKey)) || {}; } catch(e) {}
+                    for (var cat in billData) {
+                        totalBilled += billData[cat];
+                    }
+                }
+            }
+            
+            // Summary below table
+            var diff = totalBilled - totalAttended;
+            var diffClass = diff >= 0 ? 'color:#27ae60;' : 'color:#e74c3c;';
+            var diffPct = totalAttended > 0 ? Math.round((totalBilled - totalAttended) / totalAttended * 1000) / 10 : 0;
+            var summaryHtml = '<div style="margin-top:24px; display:flex; gap:24px; flex-wrap:wrap;">';
+            summaryHtml += '<div class="stat-card"><div class="number">' + totalAttended + '</div><div class="label">Total Atendidos</div></div>';
+            summaryHtml += '<div class="stat-card"><div class="number">' + totalBilled + '</div><div class="label">Total Facturados</div></div>';
+            summaryHtml += '<div class="stat-card" style="background:' + (diff >= 0 ? '#dcfce7' : '#fee2e2') + ';">';
+            summaryHtml += '<div class="number" style="' + diffClass + '">' + (diff >= 0 ? '+' : '') + diff + '</div>';
+            summaryHtml += '<div class="label">Diferencia (' + diffPct + '%)</div></div></div>';
+            
+            // Table for editing current month
+            var prices = getEffectivePrices(month);
             var billingKey = 'clinicBilling_' + month + '_' + doctorId;
             var billingData = {};
-            try {
-                billingData = JSON.parse(localStorage.getItem(billingKey)) || {};
-            } catch(e) {}
+            try { billingData = JSON.parse(localStorage.getItem(billingKey)) || {}; } catch(e) {}
 
             var el = document.getElementById('billingContent');
-            var html = '<div class="table-scroll"><table><thead><tr>';
+            var html = '<div style="margin-bottom:12px; color:var(--text-muted); font-size:0.9rem; font-weight:600;">Editando: ' + formatMonth(month) + '</div>';
+            html += '<div class="table-scroll"><table><thead><tr>';
             html += '<th>Aseguradora</th><th style="text-align:right;">Precio (€)';
             html += '</th><th style="text-align:right;">Facturados</th><th style="text-align:right;">Total (€)</th>';
             html += '</tr></thead><tbody>';
 
-            var totalBilled = 0, totalReceived = 0;
+            var totalMonthBilled = 0, totalMonthReceived = 0;
 
-            for (var i = 0; i < CATEGORIES.length; i++) {
-                var cat = CATEGORIES[i];
+            for (var j = 0; j < CATEGORIES.length; j++) {
+                var cat = CATEGORIES[j];
                 var price = prices[cat] || 0;
                 var billedCount = billingData[cat] || 0;
                 var received = billedCount * price;
 
-                totalBilled += billedCount;
-                totalReceived += received;
+                totalMonthBilled += billedCount;
+                totalMonthReceived += received;
 
                 html += '<tr><td style="font-weight:600;">' + cat + '</td>';
                 html += '<td style="text-align:right; color:var(--primary);">' + (price > 0 ? price.toFixed(2) : '—') + '</td>';
@@ -1068,15 +1104,17 @@ function updateBilling() {
 
             html += '<tr style="background:#f0fdfa; font-weight:700; border-top:2px solid #5eead4;">';
             html += '<td>TOTAL</td><td></td>';
-            html += '<td style="text-align:right;">' + totalBilled + '</td>';
-            html += '<td style="text-align:right;">' + totalReceived.toFixed(2) + '</td>';
+            html += '<td style="text-align:right;">' + totalMonthBilled + '</td>';
+            html += '<td style="text-align:right;">' + totalMonthReceived.toFixed(2) + '</td>';
             html += '</tr></tbody></table></div>';
+            
+            html += summaryHtml;
 
             el.innerHTML = html;
         }
 
         function saveBillingData() {
-            var month = document.getElementById('billingMonthSelect').value;
+            var month = document.getElementById('globalMonthSelect').value;
             var billingData = {};
             for (var i = 0; i < CATEGORIES.length; i++) {
                 var cat = CATEGORIES[i];
@@ -1092,14 +1130,14 @@ function updateBilling() {
         }
 
         function printBilling() {
-            var month = document.getElementById('billingMonthSelect').value;
+            var month = document.getElementById('globalMonthSelect').value;
             var monthLabel = formatMonth(month);
             var info = getClinicInfo();
             var doc = getCurrentDoctor();
             var clinicLogo = localStorage.getItem('clinicLogo');
-            var prices = getEffectivePrices(month);
+            var prices = getEffectivePrices(monthTo);
             var doctorId = _currentDoctorId || 'doc_default';
-            var billingKey = 'clinicBilling_' + month + '_' + doctorId;
+            var billingKey = 'clinicBilling_' + monthTo + '_' + doctorId;
             var billingData = {};
             try { billingData = JSON.parse(localStorage.getItem(billingKey)) || {}; } catch(e) {}
 
@@ -1121,7 +1159,7 @@ function updateBilling() {
 
             var logoHtml = clinicLogo ? '<img src="' + clinicLogo + '" alt="" style="max-height:50px; max-width:150px; object-fit:contain; margin-bottom:6px; display:block; border-radius:4px;">' : '';
             var today = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
-            var orderNum = 'FAC-' + month.replace('-', '');
+            var orderNum = 'FAC-' + monthTo.replace('-', '');
 
             var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Facturacion ' + monthLabel + '</title>';
             html += '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Tahoma,Verdana,sans-serif}';
