@@ -8,6 +8,25 @@ const DEFAULT_CATEGORIES = [
     'Vacunas'
 ];
 
+// ── Precios por defecto (Médico de Familia) ───────────────────────────────
+const DEFAULT_PRICES = {
+    "Adeslas": 10.94,
+    "Adeslas Revisión": 12,
+    "Adeslas Funcionarios": 18,
+    "Adeslas Vacuna Funcionarios": 10,
+    "DKV": 12.24,
+    "DKV Revisión": 8.18,
+    "DKV Famedic": 16.99,
+    "DKV Famedic Revisión": 7.79,
+    "Mapfre": 11.06,
+    "Mapfre Revisión": 9.02,
+    "AXA": 20,
+    "AXA Revisión": 14,
+    "Privado Efectivo": 35,
+    "Privado Tarjeta": 35,
+    "Vacunas": 25
+};
+
 // ── Paleta de colores (26 colores para hasta 26 categorías) ───────────────
 const COLOR_PALETTE = [
     '#667eea','#5b8dee','#3b82f6','#93c5fd',

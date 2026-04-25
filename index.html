@@ -881,7 +881,7 @@
             const entries = JSON.parse(localStorage.getItem(`clinicEntries_${doctorId}`) || '[]').filter(e => e.date.startsWith(month));
             const basePrices = JSON.parse(localStorage.getItem(`clinicPrices_${doctorId}`) || '{}');
             const overridesAll = JSON.parse(localStorage.getItem(`clinicPriceOverrides_${doctorId}`) || '{}');
-            const prices = { ...basePrices, ...(overridesAll[month] || {}) };
+            const prices = { ...DEFAULT_PRICES, ...basePrices, ...(overridesAll[month] || {}) };
             const comms = JSON.parse(localStorage.getItem(`clinicCommissions_${doctorId}`) || '{}');
             result.pacientes = entries.reduce((s, e) => s + e.count, 0);
             entries.forEach(e => {
@@ -1518,7 +1518,8 @@ function initBilling() {
         }
 
         function getPrices() {
-            return JSON.parse(localStorage.getItem(dk('clinicPrices')) || '{}');
+            const saved = JSON.parse(localStorage.getItem(dk('clinicPrices')) || '{}');
+            return { ...DEFAULT_PRICES, ...saved };
         }
 
         function savePricesToStorage(prices) {
@@ -1535,8 +1536,9 @@ function initBilling() {
 
         function getEffectivePrices(month) {
             const overrides = getPriceOverrides()[month] || {};
-            // Return only month-specific prices, no fallback to base prices (preserves historical data)
-            return { ...overrides };
+            const base = getPrices();
+            // Combine base prices with month-specific overrides
+            return { ...base, ...overrides };
         }
 
 
@@ -2462,97 +2464,96 @@ function initBilling() {
         function importFromJSON(event) {
             const file = event.target.files[0];
             if (!file) return;
-            event.target.value = ''; // reset so same file can be picked again
 
             const reader = new FileReader();
-            reader.onload = function(ev) {
+            reader.onload = function(e) {
                 try {
-                    const parsed = JSON.parse(ev.target.result);
-                    const mode   = document.querySelector('input[name="importMode"]:checked').value;
-
-                    // Support v1 (plain array) and v2 (object with metadata)
-                    let importedEntries, importedPrices, importedCommissions, importedClinicInfo, importedOverrides, importedLogo, importedDoctors;
-                    if (Array.isArray(parsed)) {
-                        importedEntries      = parsed;
-                        importedPrices       = null;
-                        importedCommissions  = null;
-                        importedClinicInfo   = null;
-                        importedOverrides    = null;
-                        importedLogo         = null;
-                        importedDoctors      = null;
-                    } else if (parsed.entries && Array.isArray(parsed.entries)) {
-                        importedEntries      = parsed.entries;
-                        importedPrices       = parsed.prices       || null;
-                        importedCommissions  = parsed.commissions  || null;
-                        importedClinicInfo   = parsed.clinicInfo   || null;
-                        importedOverrides    = parsed.priceOverrides || null;
-                        importedLogo         = parsed.clinicLogo   || null;
-                        importedDoctors      = Array.isArray(parsed.doctors) ? parsed.doctors : null;
-                    } else {
-                        toast('Formato de archivo no reconocido', 'error', 5000);
-                        return;
+                    const data = JSON.parse(e.target.result);
+                    if (!data.entries || !Array.isArray(data.entries)) {
+                        throw new Error('Formato de archivo no válido (faltan entradas)');
                     }
 
-                    // Basic validation
-                    const valid = importedEntries.filter(
-                        e => e.date && typeof e.date === 'string' &&
-                             e.category && typeof e.category === 'string' &&
-                             typeof e.count === 'number' && e.count >= 0
-                    );
+                    const mode = document.querySelector('input[name="importMode"]:checked').value;
+                    const doImportDoctors = document.getElementById('importDoctors')?.checked;
+                    const doImportClinicInfo = document.getElementById('importClinicInfo')?.checked;
+                    const doImportLogo = document.getElementById('importLogo')?.checked;
 
-                    if (valid.length === 0) {
-                        toast('No se encontraron registros válidos en el archivo', 'error', 5000);
-                        return;
+                    // 1. Médicos (Procesar primero para tener los IDs)
+                    if (doImportDoctors && data.doctors) {
+                        localStorage.setItem('clinicDoctors', JSON.stringify(data.doctors));
                     }
+                    const doctors = getDoctors();
 
-                    const doImportDoctors     = document.getElementById('importDoctors')?.checked;
-                    const doImportClinicInfo  = document.getElementById('importClinicInfo')?.checked;
-                    const doImportLogo       = document.getElementById('importLogo')?.checked;
-
+                    // 2. Limpieza si es reemplazo
                     if (mode === 'replace') {
-                        const newEntries = valid.map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
-                        saveEntries(newEntries);
-                        if (importedPrices)      savePricesToStorage(importedPrices);
-                        if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify(importedCommissions));
-                        if (doImportClinicInfo && importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify(importedClinicInfo));
-                        if (doImportLogo && importedLogo)              localStorage.setItem('clinicLogo', importedLogo);
-                        if (doImportDoctors && importedDoctors)       localStorage.setItem('clinicDoctors', JSON.stringify(importedDoctors));
-                        toast(
-                            `Datos reemplazados: ${newEntries.length} registros importados`,
-                            'success', 5000
-                        );
-                    } else {
-                        // Merge: skip entries that already exist (same date + category)
-                        const current      = getEntries();
-                        const existingKeys = new Set(current.map(e => `${e.date}|${e.category}`));
-                        const toAdd = valid
-                            .filter(e => !existingKeys.has(`${e.date}|${e.category}`))
-                            .map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
-
-                        saveEntries([...current, ...toAdd]);
-
-                        // Merge: current values take priority over imported
-                        if (importedPrices)      savePricesToStorage({ ...importedPrices, ...getPrices() });
-                        if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify({ ...importedCommissions, ...getCommissions() }));
-                        if (doImportClinicInfo && importedClinicInfo)  { const cur = Object.keys(getClinicInfo()).length > 0 ? getClinicInfo() : null; localStorage.setItem('clinicInfo', JSON.stringify(cur || importedClinicInfo)); }
-                        if (doImportLogo && importedLogo)              { const cur = localStorage.getItem('clinicLogo'); if (!cur) localStorage.setItem('clinicLogo', importedLogo); }
-                        if (doImportDoctors && importedDoctors)       { const cur = getDoctors(); if (cur.length === 0) localStorage.setItem('clinicDoctors', JSON.stringify(importedDoctors)); }
-
-                        const skipped = valid.length - toAdd.length;
-                        toast(
-                            `Añadidos ${toAdd.length} registros` +
-                            (skipped > 0 ? `, ${skipped} duplicados omitidos` : ''),
-                            'success', 5000
-                        );
+                        const allKeys = Object.keys(localStorage);
+                        allKeys.forEach(k => {
+                            if (k.startsWith('clinicEntries_') || k.startsWith('clinicPrices_') || 
+                                k.startsWith('clinicCommissions_') || k.startsWith('clinicCategories_') ||
+                                k.startsWith('clinicBilling_')) {
+                                localStorage.removeItem(k);
+                            }
+                        });
                     }
 
-                    updateDataTab();
-                    updateLogoPreview();
+                    // 3. Importar Entradas (agrupadas por doctor)
+                    const entriesByDoc = {};
+                    data.entries.forEach(e => {
+                        const dId = e.doctorId || 'doc_default';
+                        if (!entriesByDoc[dId]) entriesByDoc[dId] = [];
+                        entriesByDoc[dId].push({
+                            id: nextId() + Math.random(),
+                            date: e.date,
+                            category: e.category,
+                            count: e.count,
+                            doctorId: dId
+                        });
+                    });
+
+                    for (const dId in entriesByDoc) {
+                        const key = `clinicEntries_${dId}`;
+                        if (mode === 'replace') {
+                            localStorage.setItem(key, JSON.stringify(entriesByDoc[dId]));
+                        } else {
+                            const current = JSON.parse(localStorage.getItem(key) || '[]');
+                            const existingKeys = new Set(current.map(x => `${x.date}|${x.category}`));
+                            const toAdd = entriesByDoc[dId].filter(x => !existingKeys.has(`${x.date}|${x.category}`));
+                            localStorage.setItem(key, JSON.stringify([...current, ...toAdd]));
+                        }
+                    }
+
+                    // 4. Importar Configuración (Precios, Comisiones, Categorías)
+                    const targetDocId = (doctors.length > 0) ? doctors[0].id : 'doc_default';
+                    if (data.prices) localStorage.setItem(`clinicPrices_${targetDocId}`, JSON.stringify(data.prices));
+                    if (data.commissions) localStorage.setItem(`clinicCommissions_${targetDocId}`, JSON.stringify(data.commissions));
+                    if (data.categories) localStorage.setItem(`clinicCategories_${targetDocId}`, JSON.stringify(data.categories));
+                    
+                    // 5. Info Clínica y Logo
+                    if (doImportClinicInfo && data.clinicInfo) localStorage.setItem('clinicInfo', JSON.stringify(data.clinicInfo));
+                    if (doImportLogo && data.clinicLogo) localStorage.setItem('clinicLogo', data.clinicLogo);
+
+                    // 6. Selección de médico
+                    if (!_currentDoctorId || !doctors.find(d => d.id === _currentDoctorId)) {
+                        if (doctors.length > 0) {
+                            _currentDoctorId = doctors[0].id;
+                            localStorage.setItem('currentDoctorId', _currentDoctorId);
+                        }
+                    }
+
+                    refreshCategories();
+                    updateGlobalMonthSelect();
                     updateHeader();
+                    updateDataTab();
                     renderDoctorManager();
+                    
+                    toast(mode === 'replace' ? 'Datos reemplazados' : 'Datos combinados', 'success');
+                    if (document.getElementById('monthly-tab').style.display === 'block') loadMonthlyData();
+
                 } catch (err) {
-                    toast('Error al leer el archivo: ' + err.message, 'error', 6000);
+                    console.error(err);
+                    toast('Error al importar: ' + err.message, 'error');
                 }
+                event.target.value = '';
             };
             reader.readAsText(file);
         }
