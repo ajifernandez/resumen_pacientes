@@ -238,7 +238,7 @@
                     </div>
                 </div>
                 <div class="info-box">
-                    Seleccionael rango de meses using the selector superior para ver la сравнение. Edita los pacientes facturados para el mes actuel.
+                    Edita los pacientes facturados para el mes actual. El resumen compara pacientes atendidos vs facturados en un rango de meses.
                 </div>
                 <div id="billingContent"></div>
             </div>
@@ -557,9 +557,10 @@
             if (logo) {
                 el.innerHTML = `<img src="${logo}" alt="${info.name || 'Clínica'}" style="max-height:54px; vertical-align:middle; margin-right:12px; border-radius:6px; object-fit:contain;">${info.name || ''}`;
             } else {
+                const defaultLogo = 'data:image/svg+xml;base64,PCFET0NUWVBFIHN2ZyBQVBMTEVuc2hpY2sgaW5jbHVkZWQgdXNpbmcgVUsgSWRlbnRpdHkgLSBodHRwczovL3d3dy51bml0a3MuY29tL2lkZW50aXR5PzWmXSI+PHN2ZyB2ZXJzaW9uPSIxLjEiIGVuY29kaW5nPSJUTFgiIHN0eWxlPSIjZmZmIiB4bGxzazp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0aXRhPzEyMjwvdGl0bGU+PGc+PGxp世家UEVORORldj8vR0VOVklPTEVSPSJodHRwczovL3d3dy5jb250aWdvLW1lZGl0ZS5jb20vdzE5MHgxMjAwIiB0YXJnZXRfYmxhbms9Il9ibGFuayI+PHBhdGggZD0iTTgxLjMsMTEwLjRoLTI1Ljl2LTIuOWgtOC40VjYxLjdoMjEuM2wxMi45LDQ4LjRIMTA2LjNsMTIuOC00OC40aDIxLjR2NTUuNmg1LjR2Mi45SDgxLjN6Ii8+PC9saT48bGk+PGRlZnM+PGxp世家IGlkPSJfR0VOREVSOi0xIj48bGluZWFyR3JhZGllbnQgeTE9IjAiIHgxPSIwLjUiIHkxMT0iMSIgeTEyPSIxLjUiIGdyYWRpZW50dW5pdHM9InVzZXJTcGFjZU9uV2lkdGgiIGd4bG89InBhcmVudCIgZ3JhZGllbnQtYm91bGRzPSJub25lIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0iJTIzN0I0QjRDIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0iJTIzMTdCNUI5Ii8+PC9saW5lYXJHcmFkaWVudD48L2xp世家PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgcng9IjEwIiByeT0iMTAiIHN0eWxlPSJmaWxsOiB1cmwoI19HRU5ERVI6LTEpIi8+PC9nPjwvc3ZnPiIgaWQ9Il9sb2dvIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTM5LDUpIiB4bGlszpocmVmPSJodHRwczovL3d3dy5jb250aWdvLW1lZGl0ZS5jb20vdzE5MHgxMjAwIiB0YXJnZXRfYmxhbms9Il9ibGFuayI+PC9zdmc+';
                 const docPart = doc?.name ? ` — ${doc.name}` : '';
                 const esp     = doc?.specialty ? ` · ${doc.specialty}` : '';
-                el.textContent = `🏥 ${info.name || 'Control de Pacientes'}${docPart}${esp}`;
+                el.innerHTML = `<img src="${defaultLogo}" alt="${info.name || 'Clínica'}" style="max-height:54px; vertical-align:middle; margin-right:12px; border-radius:6px; object-fit:contain;">${info.name || ''}${docPart}${esp}`;
             }
         }
 
@@ -1029,48 +1030,26 @@ function initBilling() {
         function updateBilling() {
             var sel = document.getElementById('globalMonthSelect');
             if (!sel || !sel.value) {
-                // Wait for globalMonthSelect to be initialized
                 setTimeout(updateBilling, 100);
                 return;
             }
             var month = sel.value;
             var doctorId = _currentDoctorId || 'doc_default';
             
-            // Get totals for all months with data (before current month)
-            var totalAttended = 0;
-            var totalBilled = 0;
-            
-            var allMonths = getAvailableMonths();
-            var currentMonth = month;
-            
-            // Calculate totals from all months before current
-            for (var i = 0; i < allMonths.length; i++) {
-                var m = allMonths[i];
-                if (m < currentMonth) {
-                    // Attended
-                    var entries = JSON.parse(localStorage.getItem('clinicEntries_' + doctorId) || '[]').filter(function(e) { return e.date.startsWith(m); });
-                    totalAttended += entries.reduce(function(s, e) { return s + e.count; }, 0);
-                    
-                    // Billed
-                    var billKey = 'clinicBilling_' + m + '_' + doctorId;
-                    var billData = {};
-                    try { billData = JSON.parse(localStorage.getItem(billKey)) || {}; } catch(e) {}
-                    for (var cat in billData) {
-                        totalBilled += billData[cat];
-                    }
-                }
-            }
-            
-            // Summary below table
-            var diff = totalBilled - totalAttended;
-            var diffClass = diff >= 0 ? 'color:#27ae60;' : 'color:#e74c3c;';
-            var diffPct = totalAttended > 0 ? Math.round((totalBilled - totalAttended) / totalAttended * 1000) / 10 : 0;
-            var summaryHtml = '<div style="margin-top:24px; display:flex; gap:24px; flex-wrap:wrap;">';
-            summaryHtml += '<div class="stat-card"><div class="number">' + totalAttended + '</div><div class="label">Total Atendidos</div></div>';
-            summaryHtml += '<div class="stat-card"><div class="number">' + totalBilled + '</div><div class="label">Total Facturados</div></div>';
-            summaryHtml += '<div class="stat-card" style="background:' + (diff >= 0 ? '#dcfce7' : '#fee2e2') + ';">';
-            summaryHtml += '<div class="number" style="' + diffClass + '">' + (diff >= 0 ? '+' : '') + diff + '</div>';
-            summaryHtml += '<div class="label">Diferencia (' + diffPct + '%)</div></div></div>';
+            // Summary below table with month selectors
+            var summaryHtml = '<div style="margin-top:24px; padding-top:24px; border-top:2px solid #e2e8f0;">';
+            summaryHtml += '<div style="display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">';
+            summaryHtml += '<span style="color:var(--text-muted); font-weight:500;">Resumen rango:</span>';
+            summaryHtml += '<select id="billingRangeFrom" class="doctor-select" onchange="updateBillingRange()" style="min-width:180px;"></select>';
+            summaryHtml += '<span style="color:var(--text-muted);">hasta</span>';
+            summaryHtml += '<select id="billingRangeTo" class="doctor-select" onchange="updateBillingRange()" style="min-width:180px;"></select>';
+            summaryHtml += '</div>';
+            summaryHtml += '<div style="display:flex; gap:24px; flex-wrap:wrap;">';
+            summaryHtml += '<div class="stat-card"><div class="number" id="rangeAttended">0</div><div class="label">Total Atendidos</div></div>';
+            summaryHtml += '<div class="stat-card"><div class="number" id="rangeBilled">0</div><div class="label">Total Facturados</div></div>';
+            summaryHtml += '<div class="stat-card" id="rangeDiffCard" style="background:#f0fdfa;">';
+            summaryHtml += '<div class="number" id="rangeDiff" style="color:#27ae60;">0</div>';
+            summaryHtml += '<div class="label" id="rangeDiffPct">Diferencia (0%)</div></div></div></div>';
             
             // Table for editing current month
             var prices = getEffectivePrices(month);
@@ -1109,8 +1088,90 @@ function initBilling() {
             html += '</tr></tbody></table></div>';
             
             html += summaryHtml;
-
             el.innerHTML = html;
+
+            // Initialize range selectors
+            var rangeFrom = document.getElementById('billingRangeFrom');
+            var rangeTo = document.getElementById('billingRangeTo');
+            if (rangeFrom && rangeTo) {
+                var months = getAvailableMonths().slice(0, 12);
+                rangeFrom.innerHTML = months.map(m => '<option value="' + m + '">' + formatMonth(m) + '</option>').join('');
+                rangeTo.innerHTML = months.map(m => '<option value="' + m + '">' + formatMonth(m) + '</option>').join('');
+                rangeFrom.value = months[months.length - 2] || months[0];
+                rangeTo.value = month;
+                updateBillingRange();
+            }
+        }
+
+        function updateBillingRange() {
+            var rangeFrom = document.getElementById('billingRangeFrom');
+            var rangeTo = document.getElementById('billingRangeTo');
+            if (!rangeFrom || !rangeTo) return;
+            
+            var monthFrom = rangeFrom.value;
+            var monthTo = rangeTo.value;
+            
+            var totalAttended = 0;
+            var totalBilled = 0;
+            
+            var allMonths = getAvailableMonths().sort();
+            var startMonth = monthFrom;
+            var endMonth = monthTo;
+            if (startMonth > endMonth) {
+                var tmp = startMonth;
+                startMonth = endMonth;
+                endMonth = tmp;
+            }
+            
+            var inRange = false;
+            for (var i = 0; i < allMonths.length; i++) {
+                var m = allMonths[i];
+                if (m === startMonth) inRange = true;
+                if (inRange) {
+                    // Sum attended from ALL doctors
+                    for (var di = 0; di < localStorage.length; di++) {
+                        var key = localStorage.key(di);
+                        if (key && key.startsWith('clinicEntries_')) {
+                            try {
+                                var entries = JSON.parse(localStorage.getItem(key) || '[]').filter(function(e) { return e.date.startsWith(m); });
+                                totalAttended += entries.reduce(function(s, e) { return s + (parseInt(e.count) || 0); }, 0);
+                            } catch(e) {}
+                        }
+                    }
+                    // Sum billed from ALL doctors
+                    for (var bi = 0; bi < localStorage.length; bi++) {
+                        var bkey = localStorage.key(bi);
+                        if (bkey && bkey.startsWith('clinicBilling_') && bkey.includes('_' + m + '_')) {
+                            try {
+                                var billData = JSON.parse(localStorage.getItem(bkey) || '{}');
+                                for (var cat in billData) {
+                                    totalBilled += parseInt(billData[cat]) || 0;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                }
+                if (m === endMonth) break;
+            }
+            
+            var diff = totalBilled - totalAttended;
+            var diffClass = diff >= 0 ? 'color:#27ae60;' : 'color:#e74c3c;';
+            var diffBg = diff >= 0 ? '#dcfce7' : '#fee2e2';
+            var diffPct = totalAttended > 0 ? Math.round((totalBilled - totalAttended) / totalAttended * 1000) / 10 : 0;
+            
+            var attendedEl = document.getElementById('rangeAttended');
+            var billedEl = document.getElementById('rangeBilled');
+            var diffEl = document.getElementById('rangeDiff');
+            var diffPctEl = document.getElementById('rangeDiffPct');
+            var diffCardEl = document.getElementById('rangeDiffCard');
+            if (attendedEl) attendedEl.textContent = totalAttended;
+            if (billedEl) billedEl.textContent = totalBilled;
+            if (diffEl) {
+                diffEl.textContent = (diff >= 0 ? '+' : '') + diff;
+                diffEl.style.cssText = diffClass;
+            }
+            if (diffPctEl) diffPctEl.textContent = 'Diferencia (' + diffPct + '%)';
+            if (diffCardEl) diffCardEl.style.background = diffBg;
         }
 
         function saveBillingData() {
@@ -1554,7 +1615,28 @@ function initBilling() {
          */
         function getAvailableMonths() {
             const months = new Set();
-            getEntries().forEach(e => months.add(e.date.substring(0, 7)));
+            // Scan all clinicEntries_* keys directly from localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('clinicEntries_')) {
+                    try {
+                        const entries = JSON.parse(localStorage.getItem(key) || '[]');
+                        entries.forEach(e => months.add(e.date.substring(0, 7)));
+                    } catch(e) {}
+                }
+            }
+            // Also scan all clinicBilling_* keys
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('clinicBilling_')) {
+                    // Key format: clinicBilling_YYYY-MM_docId
+                    const parts = key.split('_');
+                    if (parts.length >= 2) {
+                        months.add(parts[1]);
+                    }
+                }
+            }
+            // Fall back to last 3 months so selectors are never empty
             const now = new Date();
             for (let i = 0; i < 3; i++) {
                 const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -2280,7 +2362,8 @@ function initBilling() {
                 prices,
                 priceOverrides,
                 commissions: getCommissions(),
-                clinicInfo: getClinicInfo()
+                clinicInfo: getClinicInfo(),
+                clinicLogo: localStorage.getItem('clinicLogo') || ''
             };
             downloadFile(
                 JSON.stringify(backup, null, 2),
@@ -2373,19 +2456,21 @@ function initBilling() {
                     const mode   = document.querySelector('input[name="importMode"]:checked').value;
 
                     // Support v1 (plain array) and v2 (object with metadata)
-                    let importedEntries, importedPrices, importedCommissions, importedClinicInfo, importedOverrides;
+                    let importedEntries, importedPrices, importedCommissions, importedClinicInfo, importedOverrides, importedLogo;
                     if (Array.isArray(parsed)) {
                         importedEntries      = parsed;
                         importedPrices       = null;
                         importedCommissions  = null;
                         importedClinicInfo   = null;
                         importedOverrides    = null;
+                        importedLogo         = null;
                     } else if (parsed.entries && Array.isArray(parsed.entries)) {
                         importedEntries      = parsed.entries;
                         importedPrices       = parsed.prices       || null;
                         importedCommissions  = parsed.commissions  || null;
                         importedClinicInfo   = parsed.clinicInfo   || null;
                         importedOverrides    = parsed.priceOverrides || null;
+                        importedLogo         = parsed.clinicLogo   || null;
                     } else {
                         toast('Formato de archivo no reconocido', 'error', 5000);
                         return;
@@ -2409,6 +2494,7 @@ function initBilling() {
                         if (importedPrices)      savePricesToStorage(importedPrices);
                         if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify(importedCommissions));
                         if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify(importedClinicInfo));
+                        if (importedLogo)        localStorage.setItem('clinicLogo', importedLogo);
                         toast(
                             `Datos reemplazados: ${newEntries.length} registros importados`,
                             'success', 5000
@@ -2427,6 +2513,7 @@ function initBilling() {
                         if (importedPrices)      savePricesToStorage({ ...importedPrices, ...getPrices() });
                         if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify({ ...importedCommissions, ...getCommissions() }));
                         if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify({ ...importedClinicInfo, ...getClinicInfo() }));
+                        if (importedLogo)        { const cur = localStorage.getItem('clinicLogo'); if (!cur) localStorage.setItem('clinicLogo', importedLogo); }
 
                         const skipped = valid.length - toAdd.length;
                         toast(
@@ -2436,7 +2523,9 @@ function initBilling() {
                         );
                     }
 
-                    updateDataTab();
+updateDataTab();
+                    updateLogoPreview();
+                    updateHeader();
                 } catch (err) {
                     toast('Error al leer el archivo: ' + err.message, 'error', 6000);
                 }
