@@ -571,7 +571,7 @@
             if (logo) {
                 el.innerHTML = `<img src="${logo}" alt="${info.name || 'Clínica'}" style="max-height:54px; vertical-align:middle; margin-right:12px; border-radius:6px; object-fit:contain;">${info.name || ''}`;
             } else {
-                const defaultLogo = 'data:image/svg+xml;base64,PCFET0NUWVBFIHN2ZyBQVBMTEVuc2hpY2sgaW5jbHVkZWQgdXNpbmcgVUsgSWRlbnRpdHkgLSBodHRwczovL3d3dy51bml0a3MuY29tL2lkZW50aXR5PzWmXSI+PHN2ZyB2ZXJzaW9uPSIxLjEiIGVuY29kaW5nPSJUTFgiIHN0eWxlPSIjZmZmIiB4bGxzazp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0aXRhPzEyMjwvdGl0bGU+PGc+PGxp世家UEVORORldj8vR0VOVklPTEVSPSJodHRwczovL3d3dy5jb250aWdvLW1lZGl0ZS5jb20vdzE5MHgxMjAwIiB0YXJnZXRfYmxhbms9Il9ibGFuayI+PHBhdGggZD0iTTgxLjMsMTEwLjRoLTI1Ljl2LTIuOWgtOC40VjYxLjdoMjEuM2wxMi45LDQ4LjRIMTA2LjNsMTIuOC00OC40aDIxLjR2NTUuNmg1LjR2Mi45SDgxLjN6Ii8+PC9saT48bGk+PGRlZnM+PGxp世家IGlkPSJfR0VOREVSOi0xIj48bGluZWFyR3JhZGllbnQgeTE9IjAiIHgxPSIwLjUiIHkxMT0iMSIgeTEyPSIxLjUiIGdyYWRpZW50dW5pdHM9InVzZXJTcGFjZU9uV2lkdGgiIGd4bG89InBhcmVudCIgZ3JhZGllbnQtYm91bGRzPSJub25lIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0iJTIzN0I0QjRDIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0iJTIzMTdCNUI5Ii8+PC9saW5lYXJHcmFkaWVudD48L2xp世家PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgcng9IjEwIiByeT0iMTAiIHN0eWxlPSJmaWxsOiB1cmwoI19HRU5ERVI6LTEpIi8+PC9nPjwvc3ZnPiIgaWQ9Il9sb2dvIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTM5LDUpIiB4bGlszpocmVmPSJodHRwczovL3d3dy5jb250aWdvLW1lZGl0ZS5jb20vdzE5MHgxMjAwIiB0YXJnZXRfYmxhbms9Il9ibGFuayI+PC9zdmc+';
+                const defaultLogo = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzRmNDZlNSI+PHBhdGggZD0iTTE5IDNINWMtMS4xIDAtMiAuOS0yIDJ2MTRjMCAxLjEuOSAyIDIgMmgxNGMxLjEgMCAyLS45IDItMlY1YzAtMS4xLS45LTItMi0yem0tMSAxMWgtNHY0aC00di00SDZ2LTRoNHYtNGg0djRoNHY0eiIvPjwvc3ZnPg==';
                 const docPart = doc?.name ? ` — ${doc.name}` : '';
                 const esp     = doc?.specialty ? ` · ${doc.specialty}` : '';
                 el.innerHTML = `<img src="${defaultLogo}" alt="${info.name || 'Clínica'}" style="max-height:54px; vertical-align:middle; margin-right:12px; border-radius:6px; object-fit:contain;">${info.name || ''}${docPart}${esp}`;
@@ -1210,9 +1210,9 @@ function initBilling() {
             var info = getClinicInfo();
             var doc = getCurrentDoctor();
             var clinicLogo = localStorage.getItem('clinicLogo');
-            var prices = getEffectivePrices(monthTo);
+            var prices = getEffectivePrices(month);
             var doctorId = _currentDoctorId || 'doc_default';
-            var billingKey = 'clinicBilling_' + monthTo + '_' + doctorId;
+            var billingKey = 'clinicBilling_' + month + '_' + doctorId;
             var billingData = {};
             try { billingData = JSON.parse(localStorage.getItem(billingKey)) || {}; } catch(e) {}
 
@@ -1234,7 +1234,7 @@ function initBilling() {
 
             var logoHtml = clinicLogo ? '<img src="' + clinicLogo + '" alt="" style="max-height:50px; max-width:150px; object-fit:contain; margin-bottom:6px; display:block; border-radius:4px;">' : '';
             var today = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
-            var orderNum = 'FAC-' + monthTo.replace('-', '');
+            var orderNum = 'FAC-' + month.replace('-', '');
 
             var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Facturacion ' + monthLabel + '</title>';
             html += '<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Tahoma,Verdana,sans-serif}';
