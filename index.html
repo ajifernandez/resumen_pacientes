@@ -283,6 +283,20 @@
                                     </div>
                                 </label>
                             </div>
+                            <div style="margin-top:10px;">
+                                <label style="font-size:0.85rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">Datos adicionales a importar:</label>
+                                <div style="display:flex; flex-direction:column; gap:6px; padding-left:4px;">
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem;">
+                                        <input type="checkbox" id="importDoctors" checked> Médicos
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem;">
+                                        <input type="checkbox" id="importClinicInfo" checked> Datos de la clínica
+                                    </label>
+                                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem;">
+                                        <input type="checkbox" id="importLogo" checked> Logo
+                                    </label>
+                                </div>
+                            </div>
                             <div class="input-group">
                                 <button class="btn" onclick="document.getElementById('importFile').click()">
                                     📥 Seleccionar archivo JSON
@@ -2363,7 +2377,8 @@ function initBilling() {
                 priceOverrides,
                 commissions: getCommissions(),
                 clinicInfo: getClinicInfo(),
-                clinicLogo: localStorage.getItem('clinicLogo') || ''
+                clinicLogo: localStorage.getItem('clinicLogo') || '',
+                doctors: getDoctors()
             };
             downloadFile(
                 JSON.stringify(backup, null, 2),
@@ -2456,7 +2471,7 @@ function initBilling() {
                     const mode   = document.querySelector('input[name="importMode"]:checked').value;
 
                     // Support v1 (plain array) and v2 (object with metadata)
-                    let importedEntries, importedPrices, importedCommissions, importedClinicInfo, importedOverrides, importedLogo;
+                    let importedEntries, importedPrices, importedCommissions, importedClinicInfo, importedOverrides, importedLogo, importedDoctors;
                     if (Array.isArray(parsed)) {
                         importedEntries      = parsed;
                         importedPrices       = null;
@@ -2464,6 +2479,7 @@ function initBilling() {
                         importedClinicInfo   = null;
                         importedOverrides    = null;
                         importedLogo         = null;
+                        importedDoctors      = null;
                     } else if (parsed.entries && Array.isArray(parsed.entries)) {
                         importedEntries      = parsed.entries;
                         importedPrices       = parsed.prices       || null;
@@ -2471,6 +2487,7 @@ function initBilling() {
                         importedClinicInfo   = parsed.clinicInfo   || null;
                         importedOverrides    = parsed.priceOverrides || null;
                         importedLogo         = parsed.clinicLogo   || null;
+                        importedDoctors      = Array.isArray(parsed.doctors) ? parsed.doctors : null;
                     } else {
                         toast('Formato de archivo no reconocido', 'error', 5000);
                         return;
@@ -2488,13 +2505,18 @@ function initBilling() {
                         return;
                     }
 
+                    const doImportDoctors     = document.getElementById('importDoctors')?.checked;
+                    const doImportClinicInfo  = document.getElementById('importClinicInfo')?.checked;
+                    const doImportLogo       = document.getElementById('importLogo')?.checked;
+
                     if (mode === 'replace') {
                         const newEntries = valid.map(e => ({ id: nextId(), date: e.date, category: e.category, count: e.count }));
                         saveEntries(newEntries);
                         if (importedPrices)      savePricesToStorage(importedPrices);
                         if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify(importedCommissions));
-                        if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify(importedClinicInfo));
-                        if (importedLogo)        localStorage.setItem('clinicLogo', importedLogo);
+                        if (doImportClinicInfo && importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify(importedClinicInfo));
+                        if (doImportLogo && importedLogo)              localStorage.setItem('clinicLogo', importedLogo);
+                        if (doImportDoctors && importedDoctors)       localStorage.setItem('clinicDoctors', JSON.stringify(importedDoctors));
                         toast(
                             `Datos reemplazados: ${newEntries.length} registros importados`,
                             'success', 5000
@@ -2512,8 +2534,9 @@ function initBilling() {
                         // Merge: current values take priority over imported
                         if (importedPrices)      savePricesToStorage({ ...importedPrices, ...getPrices() });
                         if (importedCommissions) localStorage.setItem(dk('clinicCommissions'), JSON.stringify({ ...importedCommissions, ...getCommissions() }));
-                        if (importedClinicInfo)  localStorage.setItem('clinicInfo', JSON.stringify({ ...importedClinicInfo, ...getClinicInfo() }));
-                        if (importedLogo)        { const cur = localStorage.getItem('clinicLogo'); if (!cur) localStorage.setItem('clinicLogo', importedLogo); }
+                        if (doImportClinicInfo && importedClinicInfo)  { const cur = Object.keys(getClinicInfo()).length > 0 ? getClinicInfo() : null; localStorage.setItem('clinicInfo', JSON.stringify(cur || importedClinicInfo)); }
+                        if (doImportLogo && importedLogo)              { const cur = localStorage.getItem('clinicLogo'); if (!cur) localStorage.setItem('clinicLogo', importedLogo); }
+                        if (doImportDoctors && importedDoctors)       { const cur = getDoctors(); if (cur.length === 0) localStorage.setItem('clinicDoctors', JSON.stringify(importedDoctors)); }
 
                         const skipped = valid.length - toAdd.length;
                         toast(
@@ -2523,9 +2546,10 @@ function initBilling() {
                         );
                     }
 
-updateDataTab();
+                    updateDataTab();
                     updateLogoPreview();
                     updateHeader();
+                    renderDoctorManager();
                 } catch (err) {
                     toast('Error al leer el archivo: ' + err.message, 'error', 6000);
                 }
@@ -2545,12 +2569,26 @@ updateDataTab();
                 localStorage.removeItem(dk('clinicCommissions'));
                 localStorage.removeItem(dk('clinicCategories'));
                 localStorage.removeItem('clinicNextId');
+                localStorage.removeItem('clinicDoctors');
+                localStorage.removeItem('clinicInfo');
+                localStorage.removeItem('clinicLogo');
+                localStorage.removeItem('clinicCurrentDoctor');
+                _currentDoctorId = null;
+                // Clear all price overrides
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('clinicPriceOverrides_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
                 btn.dataset.confirm = '';
                 btn.textContent     = '🗑️ Borrar Todos los Datos';
                 btn.className       = 'btn btn-danger';
                 refreshCategories();
                 updateHeader();
                 updateDataTab();
+                updateLogoPreview();
+                renderDoctorManager();
                 toast('Todos los datos han sido eliminados', 'info');
             } else {
                 btn.dataset.confirm = '1';
