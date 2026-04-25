@@ -19,7 +19,11 @@
 *, *::before, *::after {
     margin: 0; padding: 0; box-sizing: border-box;
     font-family: 'Inter', sans-serif;
+    min-width: 0; /* Evita que hijos de grid/flex desborden su columna */
 }
+
+/* Prevención global de desbordamiento horizontal */
+html { overflow-x: hidden; }
 
 body {
     background: var(--bg-gradient);
@@ -27,6 +31,7 @@ body {
     color: var(--text-main);
     min-height: 100vh;
     padding: 30px 20px;
+    overflow-x: hidden;
 }
 
 /* Title */
@@ -37,9 +42,11 @@ h1 {
     font-size: 2.5rem;
     font-weight: 700;
     letter-spacing: -0.02em;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
-.container { max-width: 1200px; margin: 0 auto; }
+.container { width: 100%; max-width: 1200px; margin: 0 auto; overflow-x: hidden; }
 
 /* Navigation Tabs */
 .tabs {
@@ -98,6 +105,7 @@ input[type="date"], input[type="number"], input[type="text"], select {
     color: var(--text-main);
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    max-width: 100%;
 }
 
 input:focus, select:focus {
@@ -171,7 +179,49 @@ tbody tr { transition: background 0.2s ease; }
 tbody tr:hover { background: #f8fafc; }
 
 .category-row td:first-child { font-weight: 600; }
-.category-row input { width: 100px; text-align: center; }
+.category-row td { padding: 8px 10px; }
+.category-row input { width: 80px; text-align: center; padding: 6px 8px; font-size: 0.9rem; }
+
+/* Precios y Comisiones — campos globales */
+.config-pct-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.config-pct-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.config-pct-row label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.config-pct-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.config-pct-input input {
+    width: 80px;
+    padding: 6px 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+.config-pct-input span {
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
 
 /* Charts */
 .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px; }
@@ -286,6 +336,8 @@ tbody tr:hover { background: #f8fafc; }
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
+    max-width: 100%;
+    width: 100%;
 }
 
 /* ── Breakpoints ─────────────────────────────────────────────── */
@@ -356,14 +408,21 @@ tbody tr:hover { background: #f8fafc; }
 
 /* ── Mobile overrides (< 640px) ──────────────────────────────── */
 @media (max-width: 639px) {
-    body { padding: 16px 12px; }
-    h1 { font-size: 1.5rem; margin-bottom: 20px; }
-    .card { padding: 20px 16px; border-radius: 16px; }
+    body { padding: 12px 10px; }
+    h1 { font-size: 1.35rem; margin-bottom: 16px; }
+    .card { padding: 18px 14px; border-radius: 16px; margin-bottom: 16px; }
+    .card h2 { font-size: 1.15rem; margin-bottom: 14px; }
+    .info-box { font-size: 0.85rem; padding: 10px 12px; margin-bottom: 14px; }
 
+    /* ── Doctor bar ── */
+    .doctor-bar { flex-direction: column; align-items: stretch; gap: 6px; padding: 10px 14px; }
+    .doctor-select { min-width: 0; width: 100%; font-size: 0.9rem; }
+
+    /* ── Navigation tabs ── */
     .mobile-tab-selector {
         display: flex; justify-content: space-between; align-items: center;
-        background: var(--glass-bg); padding: 14px 20px; border-radius: 14px;
-        border: 1px solid var(--glass-border); margin-bottom: 15px;
+        background: var(--glass-bg); padding: 13px 18px; border-radius: 14px;
+        border: 1px solid var(--glass-border); margin-bottom: 12px;
         color: var(--primary); font-weight: 600; cursor: pointer;
         box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -375,22 +434,78 @@ tbody tr:hover { background: #f8fafc; }
         to { opacity: 1; transform: translateY(0); }
     }
     .tabs {
-        display: none; flex-direction: column; padding: 12px; margin-bottom: 25px;
+        display: none; flex-direction: column; padding: 10px; margin-bottom: 20px;
         border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); background: white;
     }
-    .tabs.expanded {
-        display: flex; animation: fadeInDown 0.2s ease;
-    }
-    .tab { text-align: left; padding: 12px 16px; font-size: 1rem; border-radius: 10px; background: transparent; white-space: normal; }
+    .tabs.expanded { display: flex; animation: fadeInDown 0.2s ease; }
+    .tab { text-align: left; padding: 11px 14px; font-size: 0.95rem; border-radius: 10px; background: transparent; white-space: normal; }
     .tab.active { background: var(--primary-light); color: var(--primary); box-shadow: none; }
-    .charts-container { grid-template-columns: 1fr; }
-    .month-header { flex-direction: column; align-items: flex-start; }
-    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    .stat-card .number { font-size: 1.6rem; }
-    .btn { padding: 10px 16px; font-size: 0.9rem; }
-    .input-group { flex-direction: column; align-items: stretch; }
+
+    /* ── Entrada diaria: sidebar encima de la tabla ── */
+    .daily-sidebar { order: -1; }
+    .daily-total-box {
+        flex-direction: row !important; align-items: center !important;
+        gap: 12px !important; padding: 12px 16px !important;
+        flex-wrap: nowrap !important;
+    }
+    .daily-total-label { font-size: 0.85rem !important; white-space: nowrap; }
+    .daily-total-box .total-value {
+        font-size: 2.2rem !important; padding: 0 !important;
+        text-align: left !important; flex: 1;
+    }
+    .daily-total-unit { font-size: 0.8rem !important; white-space: nowrap; }
+    .daily-save-box { margin-top: 10px !important; }
+    #dailySidebarStats { display: none; }
+    #dailyTableBody td { padding: 10px 10px; }
+    #dailyTableBody input[type="number"] { width: 90px; }
+
+    /* ── Estadísticas ── */
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 13px 12px; border-radius: 14px; }
+    .stat-card .number { font-size: 1.45rem; margin-bottom: 4px; }
+    .stat-card .label { font-size: 0.8rem; margin-bottom: 4px; }
+    .stat-card .trend { font-size: 0.75rem; padding: 3px 8px; }
+    .charts-container { grid-template-columns: 1fr; gap: 14px; }
+    .chart-wrapper, .chart-wrapper-full { padding: 14px; border-radius: 14px; margin-top: 14px; }
+    .chart-canvas-wrap { height: 200px; }
+    .chart-wrapper-full .chart-canvas-wrap { height: 170px; }
+    .month-header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+    .month-selector { gap: 6px; flex-wrap: wrap; }
+    .month-selector select { width: 100%; }
+    .month-selector .btn { font-size: 0.8rem; padding: 7px 10px; flex: 1; min-width: 100px; }
+
+    /* ── Historial compacto ── */
+    #historyTable th { padding: 8px; font-size: 0.75rem; }
+    #historyTable td { padding: 6px 8px; font-size: 0.85rem; }
+    #historyTable .day-group-header td { padding-top: 12px; padding-bottom: 8px; font-size: 0.88rem; }
+    #historyTable tbody tr td:first-child { padding-left: 12px !important; font-size: 0.75rem; }
+    #historyTable .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+    .summary-pills { gap: 6px; margin-bottom: 12px; }
+    .pill { padding: 6px 11px; font-size: 0.8rem; }
+
+    /* ── Configuración ── */
+    .config-layout { grid-template-columns: 1fr; gap: 16px; }
     .data-layout { grid-template-columns: 1fr; }
-    .config-layout { grid-template-columns: 1fr; }
+    .config-pct-grid { grid-template-columns: 1fr; }
+
+    /* Formulario añadir médico: 1 columna */
+    .new-doctor-grid { grid-template-columns: 1fr !important; }
+
+    /* Tabla doctor manager: ocultar columnas secundarias, mostrar sólo Nombre + Acciones */
+    #doctorMgrContent th:nth-child(2), #doctorMgrContent td:nth-child(2),
+    #doctorMgrContent th:nth-child(3), #doctorMgrContent td:nth-child(3),
+    #doctorMgrContent th:nth-child(4), #doctorMgrContent td:nth-child(4) { display: none; }
+    #doctorMgrContent th, #doctorMgrContent td { padding: 8px 10px; font-size: 0.88rem; }
+
+    .irpf-hint { display: none; }
+    .radio-group { flex-direction: column; gap: 10px; }
+
+    /* ── Botones y formularios ── */
+    .btn { padding: 10px 14px; font-size: 0.9rem; }
+    .input-group { flex-direction: column; align-items: stretch; }
+
+    /* ── Toast centrado ── */
+    #toast { right: 12px; left: 12px; bottom: 16px; font-size: 0.88rem; padding: 12px 16px; }
 }
 
 /* ── Medium mobile (640–767px) ───────────────────────────────── */
