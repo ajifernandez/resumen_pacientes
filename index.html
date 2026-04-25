@@ -14,9 +14,15 @@
     <div class="container">
         <h1 id="app-header">🏥 Control de Pacientes</h1>
 
-        <div class="doctor-bar" id="doctorBar" style="display:none;">
-            <span class="doctor-bar-label">Médico:</span>
-            <select id="doctorSelect" class="doctor-select" onchange="switchDoctor(this.value)"></select>
+        <div class="doctor-bar" id="doctorBar" style="display:none; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <div style="display:flex; align-items:center;">
+                <span class="doctor-bar-label">Médico:</span>
+                <select id="doctorSelect" class="doctor-select" onchange="switchDoctor(this.value)"></select>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <span class="doctor-bar-label">Mes:</span>
+                <select id="globalMonthSelect" class="doctor-select" onchange="onGlobalMonthChange(this.value)"></select>
+            </div>
         </div>
 
         <div class="mobile-tab-selector" onclick="toggleMobileTabs()">
@@ -78,9 +84,6 @@
             <div class="card">
                 <div class="month-header">
                     <h2>Registrar Mes Completo</h2>
-                    <div class="month-selector">
-                        <select id="monthlyEntryMonthSelect" onchange="loadMonthlyData()"></select>
-                    </div>
                 </div>
                 
                 <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:start;">
@@ -113,7 +116,6 @@
                 <div class="month-header">
                     <h2>Estadísticas Mensuales</h2>
                     <div class="month-selector">
-                        <select id="statsMonthSelect" onchange="updateStats()"></select>
                         <button class="btn btn-success" onclick="exportToCSV()">📊 CSV Mensual</button>
                         <button class="btn btn-purple"  onclick="exportAnnualToCSV()">📊 CSV Anual</button>
                         <button class="btn" style="background:#2c3e50;" onclick="generateInvoice()">🧾 Payment Order</button>
@@ -146,9 +148,6 @@
             <div class="card">
                 <div class="month-header">
                     <h2>Historial de Registros</h2>
-                    <div class="month-selector">
-                        <select id="historyMonthSelect" onchange="updateHistory()"></select>
-                    </div>
                 </div>
                 <div id="historySummary"></div>
                 <div class="table-scroll">
@@ -172,9 +171,6 @@
             <div class="card">
                 <div class="month-header">
                     <h2>Vista Global — Todos los Médicos</h2>
-                    <div class="month-selector">
-                        <select id="globalMonthSelect" onchange="updateGlobal()"></select>
-                    </div>
                 </div>
                 <div id="globalContent"></div>
             </div>
@@ -975,13 +971,22 @@
                 document.getElementById(`${t}-tab`).style.display = (t === tab) ? 'block' : 'none';
             });
 
-            if      (tab === 'stats')   { updateMonthSelects('stats');   updateStats();   }
-            else if (tab === 'history') { updateMonthSelects('history'); updateHistory(); }
-            else if (tab === 'global')  { updateGlobal(); }  // selector populated inside updateGlobal
+            updateGlobalMonthSelect();
+
+            if      (tab === 'stats')   { updateStats();   }
+            else if (tab === 'history') { updateHistory(); }
+            else if (tab === 'global')  { updateGlobal(); }
             else if (tab === 'data')    { updateDataTab(); }
             else if (tab === 'config')  { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); renderDoctorManager(); }
             else if (tab === 'daily')   { loadDayData(); }
-            else if (tab === 'monthly') { updateMonthSelects('monthly'); loadMonthlyData(); }
+            else if (tab === 'monthly') { loadMonthlyData(); }
+        }
+
+        function onGlobalMonthChange(monthValue) {
+            if (document.getElementById('stats-tab').style.display === 'block') updateStats();
+            else if (document.getElementById('history-tab').style.display === 'block') updateHistory();
+            else if (document.getElementById('global-tab').style.display === 'block') updateGlobal();
+            else if (document.getElementById('monthly-tab').style.display === 'block') loadMonthlyData();
         }
 
         // ── Month selectors ───────────────────────────────────────────────────
@@ -1001,21 +1006,17 @@
             return [...months].sort().reverse();
         }
 
-        function updateMonthSelects(target) {
-            const months = getAvailableMonths();
-            const html = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
-            const ids = target === 'stats'   ? ['statsMonthSelect']   :
-                        target === 'history' ? ['historyMonthSelect'] :
-                        target === 'monthly' ? ['monthlyEntryMonthSelect'] :
-                        ['statsMonthSelect', 'historyMonthSelect', 'monthlyEntryMonthSelect'];
-
-            ids.forEach(id => {
-                const sel = document.getElementById(id);
-                const prev = sel.value;
-                sel.innerHTML = html;
-                // Restore previous selection when available
-                sel.value = (prev && months.includes(prev)) ? prev : (months[0] || getCurrentMonth());
-            });
+        function updateGlobalMonthSelect() {
+            // For the global tab, we show months from all doctors. For others, just the current doctor.
+            const isGlobalTab = document.getElementById('global-tab').style.display === 'block';
+            const months = isGlobalTab ? getAvailableMonthsAllDoctors() : getAvailableMonths();
+            
+            const sel = document.getElementById('globalMonthSelect');
+            if (!sel) return;
+            const prev = sel.value;
+            sel.innerHTML = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
+            // Restore previous selection when available
+            sel.value = (prev && months.includes(prev)) ? prev : (months[0] || getCurrentMonth());
         }
 
         // ── Daily entry ───────────────────────────────────────────────────────
@@ -1111,7 +1112,7 @@
         }
 
         function loadMonthlyData() {
-            const month = document.getElementById('monthlyEntryMonthSelect').value;
+            const month = document.getElementById('globalMonthSelect').value;
             if (!month) return;
             
             renderMonthlyGrid(month);
@@ -1139,7 +1140,7 @@
         }
 
         function updateMonthlyTotals() {
-            const month = document.getElementById('monthlyEntryMonthSelect').value;
+            const month = document.getElementById('globalMonthSelect').value;
             if (!month) return;
             const [y, m] = month.split('-').map(Number);
             const daysInMonth = new Date(y, m, 0).getDate();
@@ -1173,7 +1174,7 @@
         }
 
         function saveMonth() {
-            const month = document.getElementById('monthlyEntryMonthSelect').value;
+            const month = document.getElementById('globalMonthSelect').value;
             if (!month) { toast('Selecciona un mes', 'warning'); return; }
             
             // Save price overrides for this month
@@ -1240,7 +1241,7 @@
         // ── Statistics ────────────────────────────────────────────────────────
 
         function updateStats() {
-            const sel = document.getElementById('statsMonthSelect');
+            const sel = document.getElementById('globalMonthSelect');
             const month = (sel && sel.value) ? sel.value : getCurrentMonth();
 
             const { entries, data } = getMonthData(month);
@@ -1597,7 +1598,7 @@
         // ── History ───────────────────────────────────────────────────────────
 
         function updateHistory() {
-            const month = document.getElementById('historyMonthSelect').value;
+            const month = document.getElementById('globalMonthSelect').value;
             const { entries } = getMonthData(month);
             const tbody = document.querySelector('#historyTable tbody');
             const summaryEl = document.getElementById('historySummary');
@@ -1724,7 +1725,7 @@
         }
 
         function exportToCSV() {
-            const sel   = document.getElementById('statsMonthSelect');
+            const sel   = document.getElementById('globalMonthSelect');
             const month = (sel && sel.value) ? sel.value : getCurrentMonth();
             const { entries, data } = getMonthData(month);
             const prices = getPrices();
@@ -1755,7 +1756,7 @@
         }
 
         function exportAnnualToCSV() {
-            const sel      = document.getElementById('statsMonthSelect');
+            const sel      = document.getElementById('globalMonthSelect');
             const endMonth = (sel && sel.value) ? sel.value : getCurrentMonth();
             const [y, m]   = endMonth.split('-').map(Number);
             const end      = new Date(y, m - 1, 1);
@@ -1936,7 +1937,7 @@
         // ── Payment Order ─────────────────────────────────────────────────────
 
         function generateInvoice() {
-            const sel         = document.getElementById('statsMonthSelect');
+            const sel         = document.getElementById('globalMonthSelect');
             const month       = (sel && sel.value) ? sel.value : getCurrentMonth();
             const { data }    = getMonthData(month);
             const prices      = getPrices();
