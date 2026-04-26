@@ -405,11 +405,85 @@ tbody tr:hover { background: #f8fafc; }
 }
 
 /* Config: two panels side by side */
+/* Config: Sidebar layout */
 .config-layout {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 24px;
     align-items: start;
+}
+
+.config-sidebar {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 20px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+    border: 1px solid var(--glass-border);
+}
+
+.config-nav-item {
+    padding: 12px 20px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: var(--transition-base);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.config-nav-item:hover {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--primary);
+}
+
+.config-nav-item.active {
+    background: white;
+    color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.config-main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.config-section {
+    display: none;
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.config-section.active {
+    display: block;
+}
+
+@media (min-width: 1024px) {
+    .config-layout {
+        grid-template-columns: 260px 1fr;
+        gap: 40px;
+    }
+
+    .config-sidebar {
+        flex-direction: column;
+        position: sticky;
+        top: 30px;
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+    
+    .config-nav-item {
+        padding: 14px 20px;
+        font-size: 1rem;
+    }
 }
 
 /* Table scroll wrapper for narrow screens */
@@ -441,10 +515,6 @@ tbody tr:hover { background: #f8fafc; }
 
     .daily-layout {
         grid-template-columns: 1fr 300px;
-    }
-
-    .config-layout {
-        grid-template-columns: 1fr 1fr;
     }
 
     .data-layout {
@@ -565,7 +635,6 @@ tbody tr:hover { background: #f8fafc; }
     .pill { padding: 6px 11px; font-size: 0.8rem; }
 
     /* ── Configuración ── */
-    .config-layout { grid-template-columns: 1fr; gap: 16px; }
     .data-layout { grid-template-columns: 1fr; }
     .config-pct-grid { grid-template-columns: 1fr; }
 
