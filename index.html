@@ -2374,7 +2374,12 @@ function initBilling() {
                 version: 2,
                 exportDate: today,
                 recordCount: entries.length,
-                entries: entries.map(({ date, category, count }) => ({ date, category, count })),
+                monthlyEntries: entries.map(({ date, category, count, doctorId }) => ({ 
+                    date, 
+                    category, 
+                    count,
+                    doctorId: doctorId || _currentDoctorId 
+                })),
                 prices,
                 priceOverrides,
                 commissions: getCommissions(),
@@ -2469,7 +2474,8 @@ function initBilling() {
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    if (!data.entries || !Array.isArray(data.entries)) {
+                    const entriesData = data.monthlyEntries || data.entries;
+                    if (!entriesData || !Array.isArray(entriesData)) {
                         throw new Error('Formato de archivo no válido (faltan entradas)');
                     }
 
@@ -2484,6 +2490,14 @@ function initBilling() {
                     }
                     const doctors = getDoctors();
 
+                    // 1b. Asegurar que tenemos un médico seleccionado VÁLIDO antes de seguir
+                    if (!_currentDoctorId || !doctors.find(d => d.id === _currentDoctorId)) {
+                        if (doctors.length > 0) {
+                            _currentDoctorId = doctors[0].id;
+                            localStorage.setItem('currentDoctorId', _currentDoctorId);
+                        }
+                    }
+
                     // 2. Limpieza si es reemplazo
                     if (mode === 'replace') {
                         const allKeys = Object.keys(localStorage);
@@ -2496,31 +2510,22 @@ function initBilling() {
                         });
                     }
 
-                    // 3. Importar Entradas (agrupadas por doctor)
-                    const entriesByDoc = {};
-                    data.entries.forEach(e => {
-                        const dId = e.doctorId || 'doc_default';
-                        if (!entriesByDoc[dId]) entriesByDoc[dId] = [];
-                        entriesByDoc[dId].push({
-                            id: nextId() + Math.random(),
-                            date: e.date,
-                            category: e.category,
-                            count: e.count,
-                            doctorId: dId
-                        });
-                    });
-
-                    for (const dId in entriesByDoc) {
-                        const key = `clinicEntries_${dId}`;
-                        if (mode === 'replace') {
-                            localStorage.setItem(key, JSON.stringify(entriesByDoc[dId]));
-                        } else {
-                            const current = JSON.parse(localStorage.getItem(key) || '[]');
-                            const existingKeys = new Set(current.map(x => `${x.date}|${x.category}`));
-                            const toAdd = entriesByDoc[dId].filter(x => !existingKeys.has(`${x.date}|${x.category}`));
-                            localStorage.setItem(key, JSON.stringify([...current, ...toAdd]));
-                        }
+                    // 3. Import Entries assigned to the CURRENT doctor
+                    const entriesKey = dk('clinicEntries');
+                    let existingEntries = [];
+                    if (mode === 'merge') {
+                        const saved = localStorage.getItem(entriesKey);
+                        existingEntries = saved ? JSON.parse(saved) : [];
                     }
+                    
+                    // IMPORTANTE: Forzamos el doctorId actual a todas las entradas importadas
+                    const newEntries = entriesData.map(e => ({
+                        ...e,
+                        doctorId: _currentDoctorId 
+                    }));
+                    
+                    const combinedEntries = [...existingEntries, ...newEntries];
+                    localStorage.setItem(entriesKey, JSON.stringify(combinedEntries));
 
                     // 4. Importar Configuración (Precios, Comisiones, Categorías)
                     const targetDocId = (doctors.length > 0) ? doctors[0].id : 'doc_default';
@@ -2531,14 +2536,6 @@ function initBilling() {
                     // 5. Info Clínica y Logo
                     if (doImportClinicInfo && data.clinicInfo) localStorage.setItem('clinicInfo', JSON.stringify(data.clinicInfo));
                     if (doImportLogo && data.clinicLogo) localStorage.setItem('clinicLogo', data.clinicLogo);
-
-                    // 6. Selección de médico
-                    if (!_currentDoctorId || !doctors.find(d => d.id === _currentDoctorId)) {
-                        if (doctors.length > 0) {
-                            _currentDoctorId = doctors[0].id;
-                            localStorage.setItem('currentDoctorId', _currentDoctorId);
-                        }
-                    }
 
                     refreshCategories();
                     updateGlobalMonthSelect();
