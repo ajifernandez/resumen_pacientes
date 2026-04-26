@@ -8,7 +8,6 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 function getClientId() {
     const saved = localStorage.getItem('clinicGoogleClientId');
     if (saved) return saved;
-    // Fallback al Client ID por defecto (o pedir al usuario)
     return '216799672881-f38vrsusffug734rb09bejicsphtu31n.apps.googleusercontent.com';
 }
 
@@ -16,6 +15,12 @@ function saveClientId(id) {
     if (!id) { toast('Client ID no puede estar vacío', 'warning'); return; }
     localStorage.setItem('clinicGoogleClientId', id.trim());
     toast('Google Client ID guardado correctamente', 'success');
+}
+
+function updateDataTab() {
+    // El contenido de la pestaña datos está en el HTML, no necesita actualización dinámica
+    const clientIdInput = document.getElementById('google-client-id');
+    if (clientIdInput) clientIdInput.value = getClientId();
 }
 
 function connectGoogleDrive() {
