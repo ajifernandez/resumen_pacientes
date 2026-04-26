@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDoctorBar();
     updateHeader();
     
+    // Cargar Client ID si existe
+    const googleClientIdInput = document.getElementById('google-client-id');
+    if (googleClientIdInput) googleClientIdInput.value = getClientId();
+    
     // Cargar tab inicial (Daily)
     showTab('daily');
 });
@@ -58,7 +62,7 @@ function showTab(tab, btn) {
     else if (tab === 'global')   { if (window.updateGlobal) updateGlobal(); }
     else if (tab === 'compare')  { initCompare(); }
     else if (tab === 'billing')  { initBilling(); }
-    else if (tab === 'data')     { updateDataTab(); }
+    else if (tab === 'data')     { updateDataTab(); if (typeof getClientId === 'function') document.getElementById('google-client-id').value = getClientId(); }
     else if (tab === 'config')   { loadPrices(); _pendingCategories = null; renderCategoryList(); updateLogoPreview(); renderDoctorManager(); }
     else if (tab === 'daily')    { initDailyTable(); loadDayData(); updateHistory(); }
     else if (tab === 'monthly')  { loadMonthlyData(); }
