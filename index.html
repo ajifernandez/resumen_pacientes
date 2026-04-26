@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="app.css">
 </head>
 <body>
@@ -120,6 +123,7 @@
                     <div class="month-selector">
                         <button class="btn btn-success" onclick="exportToCSV()">📊 CSV Mensual</button>
                         <button class="btn btn-purple"  onclick="exportAnnualToCSV()">📊 CSV Anual</button>
+                        <button class="btn" style="background:#e74c3c; color:white;" onclick="generateProfessionalPDF()">📄 Informe PDF</button>
                         <button class="btn" style="background:#2c3e50;" onclick="generateInvoice()">🧾 Payment Order</button>
                     </div>
                 </div>
@@ -144,6 +148,7 @@
                 </div>
             </div>
         </div>
+
 
 <!-- ── History (hidden - same as monthly) ───────────────────── -->
         <!-- <div id="history-tab" style="display:none;">
@@ -251,6 +256,22 @@
                 <div class="data-layout">
                     <!-- Left column -->
                     <div>
+                        <div class="data-section" style="padding-top:0; border-top:none; margin-bottom: 25px;">
+                            <h3>☁️ Sincronización en la Nube</h3>
+                            <div class="info-box" style="background:#f0f7ff; border-color:#bcdbff;">
+                                Conecta tu cuenta de <strong>Google Drive</strong> para guardar copias automáticas y acceder a tus datos desde cualquier dispositivo de forma segura.
+                            </div>
+                            <div id="drive-sync-status" style="margin-bottom:12px; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+                                <span class="status-dot" style="width:10px; height:10px; border-radius:50%; background:#ccc;"></span>
+                                <span id="drive-status-text">No conectado</span>
+                            </div>
+                            <div class="input-group" style="gap:10px;">
+                                <button id="btn-drive-connect" class="btn btn-outline" onclick="connectGoogleDrive()">🔗 Conectar Drive</button>
+                                <button id="btn-drive-sync" class="btn btn-purple" onclick="syncToGoogleDrive()" style="display:none;">🔄 Sincronizar Ahora</button>
+                                <button id="btn-drive-disconnect" class="btn btn-danger btn-sm" onclick="disconnectGoogleDrive()" style="display:none;">Desconectar</button>
+                            </div>
+                        </div>
+
                         <div class="data-section" style="padding-top:0; border-top:none;">
                             <h3>📤 Exportar copia de seguridad</h3>
                             <div class="info-box">
@@ -1601,8 +1622,8 @@ function initBilling() {
 
             updateGlobalMonthSelect();
 
-            if      (tab === 'stats')   { updateStats();   }
-            else if (tab === 'history') { updateHistory(); }
+            if      (tab === 'stats')    { updateStats();    }
+            else if (tab === 'history')  { updateHistory();  }
             else if (tab === 'global')  { updateGlobal(); }
             else if (tab === 'compare') { initCompare(); }
             else if (tab === 'billing') { initBilling(); }
@@ -1885,6 +1906,7 @@ function initBilling() {
             showInlineMsg('saveMonthMsg', `✓ Guardado — ${totalPatients} pacientes en el mes`);
             toast(`Mes guardado: ${totalPatients} pacientes`, 'success');
         }
+
 
         // ── Data helpers ──────────────────────────────────────────────────────
 
@@ -2365,7 +2387,7 @@ function initBilling() {
          *   prices:  { category: price, ... }
          * }
          */
-        function exportToJSON() {
+        function exportToJSON(returnString = false) {
             const entries = getEntries();
             const prices  = getPrices();
             const priceOverrides = getPriceOverrides();
@@ -2387,8 +2409,11 @@ function initBilling() {
                 clinicLogo: localStorage.getItem('clinicLogo') || '',
                 doctors: getDoctors()
             };
+            const json = JSON.stringify(backup, null, 2);
+            if (returnString) return json;
+            
             downloadFile(
-                JSON.stringify(backup, null, 2),
+                json,
                 `clinica_backup_${today}.json`,
                 'application/json'
             );
@@ -2462,6 +2487,107 @@ function initBilling() {
             const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
             a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        // ── Google Drive Sync ────────────────────────────────────────────────
+
+        let tokenClient;
+        let accessToken = null;
+        const CLIENT_ID = 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com'; // El usuario debe cambiar esto
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        function connectGoogleDrive() {
+            if (CLIENT_ID === 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com') {
+                toast('Configura tu CLIENT_ID en el código para activar esta función', 'warning', 5000);
+                return;
+            }
+
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        accessToken = tokenResponse.access_token;
+                        updateDriveUI(true);
+                        toast('Conectado a Google Drive', 'success');
+                        syncToGoogleDrive();
+                    }
+                },
+            });
+
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        }
+
+        function disconnectGoogleDrive() {
+            accessToken = null;
+            updateDriveUI(false);
+            toast('Desconectado de Google Drive', 'info');
+        }
+
+        function updateDriveUI(connected) {
+            document.getElementById('btn-drive-connect').style.display = connected ? 'none' : 'block';
+            document.getElementById('btn-drive-sync').style.display = connected ? 'block' : 'none';
+            document.getElementById('btn-drive-disconnect').style.display = connected ? 'block' : 'none';
+            
+            const dot = document.querySelector('#drive-sync-status .status-dot');
+            const text = document.getElementById('drive-status-text');
+            
+            dot.style.background = connected ? '#27ae60' : '#ccc';
+            text.textContent = connected ? 'Conectado' : 'No conectado';
+        }
+
+        async function syncToGoogleDrive() {
+            if (!accessToken) return;
+
+            toast('Sincronizando con Drive...', 'info');
+            const data = exportToJSON(true); // Get data as string
+            const filename = `clinica_backup_${new Date().toISOString().split('T')[0]}.json`;
+
+            try {
+                // 1. Search for existing backup file to update it
+                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${filename}' and trashed=false`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const searchData = await searchRes.json();
+                
+                let fileId = null;
+                if (searchData.files && searchData.files.length > 0) {
+                    fileId = searchData.files[0].id;
+                }
+
+                const metadata = {
+                    name: filename,
+                    mimeType: 'application/json'
+                };
+
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', new Blob([data], { type: 'application/json' }));
+
+                let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+                let method = 'POST';
+
+                if (fileId) {
+                    url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
+                    method = 'PATCH';
+                }
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: form
+                });
+
+                if (res.ok) {
+                    toast('Sincronización completada', 'success');
+                    document.getElementById('drive-status-text').textContent = 'Conectado (Sincronizado: ' + new Date().toLocaleTimeString() + ')';
+                } else {
+                    throw new Error('Error al subir archivo');
+                }
+            } catch (err) {
+                console.error(err);
+                toast('Error de sincronización: ' + err.message, 'error');
+            }
         }
 
         // ── Import ────────────────────────────────────────────────────────────
@@ -2623,6 +2749,135 @@ function initBilling() {
             showInlineMsg('clinicSaveMsg', '✓ Datos guardados', 4000);
             toast('Datos de la clínica guardados', 'success');
             updateHeader();
+        }
+
+        async function generateProfessionalPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            
+            const sel = document.getElementById('globalMonthSelect');
+            const month = (sel && sel.value) ? sel.value : getCurrentMonth();
+            const monthLabel = formatMonth(month);
+            const { data } = getMonthData(month);
+            const prices = getPrices();
+            const commissions = getCommissions();
+            const clinicInfo = getClinicInfo();
+            const doctor = getCurrentDoctor();
+            const logo = localStorage.getItem('clinicLogo');
+
+            toast('Generando PDF...', 'info');
+
+            // 1. Header & Logo
+            let y = 15;
+            if (logo) {
+                try {
+                    doc.addImage(logo, 'PNG', 15, y, 40, 15);
+                    y += 20;
+                } catch(e) { console.error('Error adding logo to PDF', e); }
+            }
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            doc.text(clinicInfo.name || 'Clínica', logo ? 60 : 15, logo ? 22 : y);
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100);
+            if (clinicInfo.address) {
+                doc.text(clinicInfo.address, logo ? 60 : 15, logo ? 27 : y + 5);
+            }
+            
+            y = logo ? 40 : y + 15;
+            doc.setDrawColor(200);
+            doc.line(15, y, pageWidth - 15, y);
+            y += 10;
+
+            // 2. Report Info
+            doc.setTextColor(0);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Informe Mensual: ${monthLabel}`, 15, y);
+            y += 7;
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Médico: ${doctor?.name || 'N/A'} ${doctor?.specialty ? `(${doctor.specialty})` : ''}`, 15, y);
+            y += 5;
+            doc.text(`NIF: ${doctor?.nif || 'N/A'}`, 15, y);
+            y += 10;
+
+            // 3. Summary Table
+            doc.setFont('helvetica', 'bold');
+            doc.setFillColor(240, 244, 255);
+            doc.rect(15, y, pageWidth - 30, 8, 'F');
+            doc.text('Categoría', 20, y + 5.5);
+            doc.text('Pacientes', 100, y + 5.5, { align: 'right' });
+            doc.text('Precio', 130, y + 5.5, { align: 'right' });
+            doc.text('Total Bruto', 180, y + 5.5, { align: 'right' });
+            y += 8;
+
+            doc.setFont('helvetica', 'normal');
+            let totalPacientes = 0;
+            let totalBruto = 0;
+
+            CATEGORIES.forEach(cat => {
+                const count = data[cat] || 0;
+                if (count > 0) {
+                    const price = prices[cat] || 0;
+                    const total = count * price;
+                    totalPacientes += count;
+                    totalBruto += total;
+
+                    if (y > 270) { doc.addPage(); y = 20; }
+                    doc.text(cat, 20, y + 6);
+                    doc.text(count.toString(), 100, y + 6, { align: 'right' });
+                    doc.text(`${price.toFixed(2)}€`, 130, y + 6, { align: 'right' });
+                    doc.text(`${total.toFixed(2)}€`, 180, y + 6, { align: 'right' });
+                    y += 7;
+                    doc.setDrawColor(240);
+                    doc.line(15, y, pageWidth - 15, y);
+                }
+            });
+
+            // Total Row
+            y += 2;
+            doc.setFont('helvetica', 'bold');
+            doc.text('TOTAL', 20, y + 6);
+            doc.text(totalPacientes.toString(), 100, y + 6, { align: 'right' });
+            doc.text(`${totalBruto.toFixed(2)}€`, 180, y + 6, { align: 'right' });
+            y += 15;
+
+            // 4. Charts Capture
+            try {
+                const chartsContainer = document.querySelector('.charts-container');
+                if (chartsContainer) {
+                    const canvas = await html2canvas(chartsContainer, { scale: 2 });
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgProps = doc.getImageProperties(imgData);
+                    const imgHeight = (imgProps.height * (pageWidth - 30)) / imgProps.width;
+                    
+                    if (y + imgHeight > 280) { doc.addPage(); y = 20; }
+                    doc.addImage(imgData, 'PNG', 15, y, pageWidth - 30, imgHeight);
+                    y += imgHeight + 10;
+                }
+                
+                const annualChartCanvas = document.getElementById('annualChart');
+                if (annualChartCanvas) {
+                    const canvas = await html2canvas(annualChartCanvas.parentElement, { scale: 2 });
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgProps = doc.getImageProperties(imgData);
+                    const imgHeight = (imgProps.height * (pageWidth - 30)) / imgProps.width;
+                    
+                    if (y + imgHeight > 280) { doc.addPage(); y = 20; }
+                    doc.addImage(imgData, 'PNG', 15, y, pageWidth - 30, imgHeight);
+                }
+            } catch (e) {
+                console.error('Error capturing charts for PDF', e);
+            }
+
+            doc.save(`Informe_${doctor?.name || 'Clinica'}_${month}.pdf`);
+            toast('PDF generado correctamente', 'success');
         }
 
         // ── Payment Order ─────────────────────────────────────────────────────
