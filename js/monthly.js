@@ -39,6 +39,30 @@ function renderMonthlyGrid(month) {
     CATEGORIES.forEach(cat => footHTML += `<td id="month_cat_total_${catId(cat)}">0</td>`);
     footHTML += `<td id="month_grand_total">0</td></tr>`;
     foot.innerHTML = footHTML;
+
+    renderQuickEntry();
+}
+
+function renderQuickEntry() {
+    const el = document.getElementById('quickMonthlyEntry');
+    if (!el) return;
+    el.innerHTML = CATEGORIES.map(cat => `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${cat}">${cat}</label>
+            <input type="number" id="quick_${catId(cat)}" placeholder="Total mes..." 
+                   style="width:100%; padding:8px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); color:var(--text-main); font-weight:700;"
+                   oninput="syncQuickToGrid('${cat}')">
+        </div>
+    `).join('');
+}
+
+function syncQuickToGrid(cat) {
+    const quickInp = document.getElementById(`quick_${catId(cat)}`);
+    const gridInp  = document.getElementById(`month_1_${catId(cat)}`);
+    if (quickInp && gridInp) {
+        gridInp.value = quickInp.value;
+        updateMonthlyTotals();
+    }
 }
 
 function loadMonthlyData() {
@@ -63,6 +87,12 @@ function loadMonthlyData() {
         const day = parseInt(e.date.split('-')[2], 10);
         const input = document.getElementById(`month_${day}_${catId(e.category)}`);
         if (input) input.value = e.count;
+        
+        // Si es el día 1, también ponemos en la carga rápida
+        if (day === 1) {
+            const quickInp = document.getElementById(`quick_${catId(e.category)}`);
+            if (quickInp) quickInp.value = e.count;
+        }
     });
     
     updateMonthlyTotals();

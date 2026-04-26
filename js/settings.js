@@ -2,6 +2,17 @@
  * config.js - Configuración, Médicos y Backups
  */
 
+function showConfigSection(section, btn) {
+    // Actualizar botones del sidebar
+    document.querySelectorAll('.config-nav-item').forEach(el => el.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    // Mostrar sección correspondiente
+    document.querySelectorAll('.config-section').forEach(el => el.classList.remove('active'));
+    const target = document.getElementById(`config-section-${section}`);
+    if (target) target.classList.add('active');
+}
+
 // ── Gestión de Médicos ──────────────────────────────────────────────────
 
 function renderDoctorManager() {
@@ -78,20 +89,43 @@ function removeDoctor(id) {
 }
 
 function editDoctor(id) {
-    const doc = getDoctors().find(d => d.id === id);
+    const docs = getDoctors();
+    const doc = docs.find(d => d.id === id);
     if (!doc) return;
-    const newName = prompt('Nombre del médico:', doc.name);
-    if (newName === null) return;
-    doc.name = newName;
-    doc.specialty = prompt('Especialidad:', doc.specialty || '');
-    doc.nif = prompt('NIF:', doc.nif || '');
-    doc.phone = prompt('Teléfono:', doc.phone || '');
-    
-    saveDoctors(getDoctors());
+
+    document.getElementById('editDoctorId').value = doc.id;
+    document.getElementById('editDoctorName').value = doc.name;
+    document.getElementById('editDoctorSpecialty').value = doc.specialty || '';
+    document.getElementById('editDoctorNif').value = doc.nif || '';
+    document.getElementById('editDoctorPhone').value = doc.phone || '';
+
+    document.getElementById('editDoctorModal').style.display = 'flex';
+}
+
+function closeEditDoctorModal() {
+    document.getElementById('editDoctorModal').style.display = 'none';
+}
+
+function saveEditDoctor() {
+    const id = document.getElementById('editDoctorId').value;
+    const name = document.getElementById('editDoctorName').value.trim();
+    if (!name) { toast('El nombre es obligatorio', 'warning'); return; }
+
+    const docs = getDoctors();
+    const doc = docs.find(d => d.id === id);
+    if (!doc) return;
+
+    doc.name = name;
+    doc.specialty = document.getElementById('editDoctorSpecialty').value.trim();
+    doc.nif = document.getElementById('editDoctorNif').value.trim();
+    doc.phone = document.getElementById('editDoctorPhone').value.trim();
+
+    saveDoctors(docs);
+    closeEditDoctorModal();
     renderDoctorManager();
     updateDoctorBar();
     updateHeader();
-    toast('Datos actualizados');
+    toast('Datos del médico actualizados');
 }
 
 // ── Datos de Clínica ────────────────────────────────────────────────────
@@ -233,7 +267,7 @@ function renderCategoryList() {
         return;
     }
     el.innerHTML = cats.map((cat, i) => `
-        <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+        <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
             <span style="width:14px; height:14px; border-radius:3px; background:${COLOR_PALETTE[i % COLOR_PALETTE.length]}; flex-shrink:0;"></span>
             <span style="flex:1; font-size:0.95rem;">${cat}</span>
             <button class="btn btn-danger btn-sm" onclick="pendingRemoveCategory(${i})">×</button>

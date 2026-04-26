@@ -26,6 +26,11 @@
                 <span class="doctor-bar-label">Mes:</span>
                 <select id="globalMonthSelect" class="doctor-select" onchange="onGlobalMonthChange(this.value)"></select>
             </div>
+            <div style="margin-left: auto; display: flex; gap: 10px;">
+                <button class="btn btn-outline btn-sm" id="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
+                    <span id="theme-toggle-icon">🌙</span>
+                </button>
+            </div>
         </div>
 
         <div class="mobile-tab-selector" onclick="toggleMobileTabs()">
@@ -90,16 +95,33 @@
                     <h2>Registrar Mes Completo</h2>
                 </div>
                 
-                <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:start;">
-                    <div class="table-scroll" style="flex: 1; min-width:300px; overflow-y: visible;">
-                        <table class="monthly-table">
-                            <thead id="monthlyTableHead"></thead>
-                            <tbody id="monthlyTableBody"></tbody>
-                            <tfoot id="monthlyTableFoot"></tfoot>
-                        </table>
+                <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:start;">
+                    <!-- Left: Quick Entry + Grid -->
+                    <div style="flex: 1; min-width:300px;">
+                        
+                        <!-- Carga Rápida Section -->
+                        <div style="background: var(--primary-light); border-radius: 16px; padding: 20px; margin-bottom: 24px; border: 1px dashed var(--primary);">
+                            <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                                🚀 Carga Rápida (Totales del Mes)
+                            </h3>
+                            <div id="quickMonthlyEntry" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px;">
+                                <!-- Se rellena dinámicamente -->
+                            </div>
+                            <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted);">
+                                * Los valores introducidos aquí se guardarán como el total de cada categoría para este mes.
+                            </div>
+                        </div>
+
+                        <div class="table-scroll" style="overflow-y: visible;">
+                            <table class="monthly-table">
+                                <thead id="monthlyTableHead"></thead>
+                                <tbody id="monthlyTableBody"></tbody>
+                                <tfoot id="monthlyTableFoot"></tfoot>
+                            </table>
+                        </div>
                     </div>
                     
-                    <div style="width:250px; flex-shrink:0;">
+                    <div style="width:250px; flex-shrink:0; position: sticky; top: 20px;">
                         <div class="day-total" style="flex-direction:column; align-items:stretch; gap:8px; margin-top:0;">
                             <span style="font-size:0.9rem; color:var(--text-muted); font-weight:500;">Total del mes</span>
                             <span class="total-value" id="monthTotal" style="font-size:3rem; text-align:center; padding:12px 0;">0</span>
@@ -521,6 +543,36 @@
     </div>
 
     <div id="toast"></div>
+
+    <!-- Modal Edición Médico -->
+    <div id="editDoctorModal" class="modal" style="display:none;">
+        <div class="modal-content card">
+            <h2>Editar Médico</h2>
+            <div class="new-doctor-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;">
+                <input type="hidden" id="editDoctorId">
+                <div style="grid-column:1/-1;">
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Nombre *</label>
+                    <input type="text" id="editDoctorName" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Especialidad</label>
+                    <input type="text" id="editDoctorSpecialty" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">NIF</label>
+                    <input type="text" id="editDoctorNif" style="width:100%;">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Teléfono</label>
+                    <input type="text" id="editDoctorPhone" style="width:100%;">
+                </div>
+            </div>
+            <div style="margin-top:24px; display:flex; gap:12px; justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="closeEditDoctorModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="saveEditDoctor()">💾 Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
 
     <script src="config.js"></script>
     <script src="sample_data.js"></script>

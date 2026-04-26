@@ -2,6 +2,35 @@
  * core.js - Lógica central, almacenamiento y utilidades globales
  */
 
+// ── Gestión de Temas ──────────────────────────────────────────────────
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = current === 'dark' ? 'light' : 'dark';
+    applyTheme(target);
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('clinicTheme', theme);
+    
+    const icon = document.getElementById('theme-toggle-icon');
+    if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+    
+    // Notificar a otros módulos si es necesario (ej: Chart.js)
+    if (window.updateStats) window.updateStats();
+    if (window.initCompare) window.initCompare();
+}
+
+function loadTheme() {
+    const saved = localStorage.getItem('clinicTheme') || 'light';
+    applyTheme(saved);
+}
+
+// Inicializar tema lo antes posible
+loadTheme();
+
+// ── Resto de variables de estado global ───────────────────────────────
+
 // Variables de estado global
 let CATEGORIES = (() => {
     try {

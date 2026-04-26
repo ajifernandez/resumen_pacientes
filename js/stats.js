@@ -453,3 +453,132 @@ function updateCompareCharts(docIdA, monthA, docIdB, monthB) {
         });
     }
 }
+
+async function generateProfessionalPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    const sel = document.getElementById('globalMonthSelect');
+    const month = (sel && sel.value) ? sel.value : getCurrentMonth();
+    const monthLabel = formatMonth(month);
+    const { data } = getMonthData(month);
+    const prices = getPrices();
+    const commissions = getCommissions();
+    const clinicInfo = getClinicInfo();
+    const doctor = getCurrentDoctor();
+    const logo = localStorage.getItem('clinicLogo');
+
+    toast('Generando PDF...', 'info');
+
+    // 1. Header & Logo
+    let y = 15;
+    if (logo) {
+        try {
+            doc.addImage(logo, 'PNG', 15, y, 40, 15);
+            y += 20;
+        } catch(e) { console.error('Error adding logo to PDF', e); }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text(clinicInfo.name || 'Clínica', logo ? 60 : 15, logo ? 22 : y);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    if (clinicInfo.address) {
+        doc.text(clinicInfo.address, logo ? 60 : 15, logo ? 27 : y + 5);
+    }
+    
+    y = logo ? 40 : y + 15;
+    doc.setDrawColor(200);
+    doc.line(15, y, pageWidth - 15, y);
+    y += 10;
+
+    // 2. Report Info
+    doc.setTextColor(0);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Informe Mensual: ${monthLabel}`, 15, y);
+    y += 7;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Médico: ${doctor?.name || 'N/A'} ${doctor?.specialty ? `(${doctor.specialty})` : ''}`, 15, y);
+    y += 5;
+    doc.text(`NIF: ${doctor?.nif || 'N/A'}`, 15, y);
+    y += 10;
+
+    // 3. Summary Table
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(240, 244, 255);
+    doc.rect(15, y, pageWidth - 30, 8, 'F');
+    doc.text('Categoría', 20, y + 5.5);
+    doc.text('Pacientes', 100, y + 5.5, { align: 'right' });
+    doc.text('Precio', 130, y + 5.5, { align: 'right' });
+    doc.text('Total Bruto', 180, y + 5.5, { align: 'right' });
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    let totalPacientes = 0;
+    let totalBruto = 0;
+
+    CATEGORIES.forEach(cat => {
+        const count = data[cat] || 0;
+        if (count > 0) {
+            const price = prices[cat] || 0;
+            const total = count * price;
+            totalPacientes += count;
+            totalBruto += total;
+
+            if (y > 270) { doc.addPage(); y = 20; }
+            doc.text(cat, 20, y + 6);
+            doc.text(count.toString(), 100, y + 6, { align: 'right' });
+            doc.text(`${price.toFixed(2)}€`, 130, y + 6, { align: 'right' });
+            doc.text(`${total.toFixed(2)}€`, 180, y + 6, { align: 'right' });
+            y += 7;
+            doc.setDrawColor(240);
+            doc.line(15, y, pageWidth - 15, y);
+        }
+    });
+
+    // Total Row
+    y += 2;
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL', 20, y + 6);
+    doc.text(totalPacientes.toString(), 100, y + 6, { align: 'right' });
+    doc.text(`${totalBruto.toFixed(2)}€`, 180, y + 6, { align: 'right' });
+    y += 15;
+
+    // 4. Charts Capture
+    try {
+        const chartsContainer = document.querySelector('.charts-container');
+        if (chartsContainer) {
+            const canvas = await html2canvas(chartsContainer, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const imgProps = doc.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * (pageWidth - 30)) / imgProps.width;
+            
+            if (y + imgHeight > 280) { doc.addPage(); y = 20; }
+            doc.addImage(imgData, 'PNG', 15, y, pageWidth - 30, imgHeight);
+            y += imgHeight + 10;
+        }
+        
+        const annualChartCanvas = document.getElementById('annualChart');
+        if (annualChartCanvas) {
+            const canvas = await html2canvas(annualChartCanvas.parentElement, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const imgProps = doc.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * (pageWidth - 30)) / imgProps.width;
+            
+            if (y + imgHeight > 280) { doc.addPage(); y = 20; }
+            doc.addImage(imgData, 'PNG', 15, y, pageWidth - 30, imgHeight);
+        }
+    } catch (e) {
+        console.error('Error capturing charts for PDF', e);
+    }
+
+    doc.save(`Informe_${doctor?.name || 'Clinica'}_${month}.pdf`);
+    toast('PDF generado correctamente', 'success');
+}
