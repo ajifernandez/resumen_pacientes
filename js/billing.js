@@ -284,7 +284,7 @@ function generateInvoice() {
     const sel         = document.getElementById('globalMonthSelect');
     const month       = (sel && sel.value) ? sel.value : getCurrentMonth();
     const { data }    = getMonthData(month);
-    const prices      = getPrices();
+    const prices      = getEffectivePrices(month);
     const commissions = getCommissions();
     const info        = getClinicInfo();
 

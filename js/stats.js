@@ -10,11 +10,16 @@ function updateStats() {
     const prices      = getEffectivePrices(month);
     const commissions = getCommissions();
 
-    const total = Object.values(data).reduce((a, b) => a + b, 0);
-    const days  = new Set(entries.map(e => e.date)).size;
+    const insuredData = {};
+    Object.entries(data).forEach(([cat, count]) => {
+        if (!cat.includes('Efectivo')) insuredData[cat] = count;
+    });
+
+    const total = Object.values(insuredData).reduce((a, b) => a + b, 0);
+    const days  = new Set(entries.filter(e => !e.category.includes('Efectivo')).map(e => e.date)).size;
 
     let totalGross = 0, totalRetention = 0;
-    Object.entries(data).forEach(([cat, count]) => {
+    Object.entries(insuredData).forEach(([cat, count]) => {
         const gross     = count * (prices[cat] || 0);
         const commPct   = effectiveCommission(cat, commissions);
         totalGross     += gross;
@@ -70,7 +75,7 @@ function updateStats() {
         }
     }
 
-    const top = Object.entries(data).sort((a, b) => b[1] - a[1])[0];
+    const top = Object.entries(insuredData).sort((a, b) => b[1] - a[1])[0];
     if (top && top[1] > 0) {
         html += `
             <div class="stat-card">
@@ -92,15 +97,20 @@ function updateCharts(month, data, entries, prices) {
     if (barChart)  barChart.destroy();
     if (lineChart) lineChart.destroy();
 
+    const insuredData = {};
+    Object.entries(data).forEach(([cat, count]) => {
+        if (!cat.includes('Efectivo')) insuredData[cat] = count;
+    });
+
     const pieCtx = document.getElementById('pieChart')?.getContext('2d');
     if (pieCtx) {
-        const activeCats = CATEGORIES.filter(k => data[k] > 0);
+        const activeCats = CATEGORIES.filter(k => k.includes('Efectivo') === false && insuredData[k] > 0);
         pieChart = new Chart(pieCtx, {
             type: 'doughnut',
             data: {
                 labels: activeCats,
                 datasets: [{
-                    data: activeCats.map(k => data[k]),
+                    data: activeCats.map(k => insuredData[k]),
                     backgroundColor: activeCats.map(k => COLORS[CATEGORIES.indexOf(k) % COLORS.length])
                 }]
             },
@@ -115,15 +125,15 @@ function updateCharts(month, data, entries, prices) {
 
     const barCtx = document.getElementById('barChart')?.getContext('2d');
     if (barCtx) {
-        const catIncome = CATEGORIES.map(cat => (data[cat] || 0) * (prices[cat] || 0));
+        const catIncome = CATEGORIES.filter(c => !c.includes('Efectivo')).map(cat => (insuredData[cat] || 0) * (prices[cat] || 0));
         barChart = new Chart(barCtx, {
             type: 'bar',
             data: {
-                labels: CATEGORIES,
+                labels: CATEGORIES.filter(c => !c.includes('Efectivo')),
                 datasets: [
                     {
                         label: 'Pacientes',
-                        data: CATEGORIES.map(cat => data[cat] || 0),
+                        data: CATEGORIES.filter(c => !c.includes('Efectivo')).map(cat => insuredData[cat] || 0),
                         backgroundColor: COLORS,
                         order: 1
                     },
@@ -168,15 +178,17 @@ function updateCharts(month, data, entries, prices) {
 
     const lineCtx = document.getElementById('lineChart')?.getContext('2d');
     if (lineCtx) {
-        const sortedDays = [...new Set(entries.map(e => e.date.slice(-2)))].sort((a, b) => parseInt(a) - parseInt(b));
+        const insuredEntries = entries.filter(e => !e.category.includes('Efectivo'));
+        const sortedDays = [...new Set(insuredEntries.map(e => e.date.slice(-2)))].sort((a, b) => parseInt(a) - parseInt(b));
         const dayCatData = {};
         const dayIncomeData = [];
-        CATEGORIES.forEach(cat => dayCatData[cat] = []);
+        const nonEfectivoCats = CATEGORIES.filter(c => !c.includes('Efectivo'));
+        nonEfectivoCats.forEach(cat => dayCatData[cat] = []);
 
         sortedDays.forEach(day => {
             let dayIncome = 0;
-            CATEGORIES.forEach(cat => {
-                const total = entries.filter(e => e.date.slice(-2) === day && e.category === cat).reduce((s, e) => s + e.count, 0);
+            nonEfectivoCats.forEach(cat => {
+                const total = insuredEntries.filter(e => e.date.slice(-2) === day && e.category === cat).reduce((s, e) => s + e.count, 0);
                 dayCatData[cat].push(total);
                 dayIncome += total * (prices[cat] || 0);
             });
@@ -189,8 +201,8 @@ function updateCharts(month, data, entries, prices) {
             data: {
                 labels: sortedDays,
                 datasets: [
-                    ...CATEGORIES.map((cat, i) => ({
-                        label: cat, data: dayCatData[cat], backgroundColor: COLORS[i % COLORS.length], stack: 'stack0', order: 1
+                    ...nonEfectivoCats.map((cat, i) => ({
+                        label: cat, data: dayCatData[cat], backgroundColor: COLORS[CATEGORIES.indexOf(cat) % COLORS.length], stack: 'stack0', order: 1
                     })),
                     ...(hasIncomeData ? [{
                         type: 'line', label: 'Ingresos (€)', data: dayIncomeData,
@@ -213,14 +225,14 @@ function updateCharts(month, data, entries, prices) {
                                 if (!ti.length) return [];
                                 const idx = ti[0].dataIndex;
                                 const lines = [];
-                                CATEGORIES.forEach(cat => {
+                                nonEfectivoCats.forEach(cat => {
                                     const val = dayCatData[cat][idx];
                                     if (val > 0) {
                                         const price = prices[cat] || 0;
                                         lines.push(`${cat}: ${val}${price > 0 ? ` (${(val * price).toFixed(2)}€)` : ''}`);
                                     }
                                 });
-                                lines.push(`─────────────`, `Total: ${CATEGORIES.reduce((s, cat) => s + dayCatData[cat][idx], 0)} pacientes`);
+                                lines.push(`─────────────`, `Total: ${nonEfectivoCats.reduce((s, cat) => s + dayCatData[cat][idx], 0)} pacientes`);
                                 if (dayIncomeData[idx] > 0) lines.push(`Ingresos: ${dayIncomeData[idx].toFixed(2)}€`);
                                 return lines;
                             }
@@ -244,7 +256,8 @@ function updateAnnualChart(endMonth) {
     const end = new Date(y, m - 1, 1);
     const labels = [], monthTotals = [], monthKeys = [];
     const categoryData = {};
-    CATEGORIES.forEach(cat => categoryData[cat] = []);
+    const nonEfectivoCats = CATEGORIES.filter(c => !c.includes('Efectivo'));
+    nonEfectivoCats.forEach(cat => categoryData[cat] = []);
     
     for (let i = 11; i >= 0; i--) {
         const d = new Date(end.getFullYear(), end.getMonth() - i, 1);
@@ -253,9 +266,9 @@ function updateAnnualChart(endMonth) {
         monthKeys.push(ms);
         
         const prices = getEffectivePrices(ms);
-        const me = getEntries().filter(e => e.date.startsWith(ms));
+        const me = getEntries().filter(e => e.date.startsWith(ms) && !e.category.includes('Efectivo'));
         let mTotal = 0;
-        CATEGORIES.forEach(cat => {
+        nonEfectivoCats.forEach(cat => {
             const ct = me.filter(e => e.category === cat).reduce((s, e) => s + e.count, 0);
             categoryData[cat].push(ct);
             mTotal += ct * (prices[cat] || 0);
@@ -272,8 +285,8 @@ function updateAnnualChart(endMonth) {
         data: {
             labels,
             datasets: [
-                ...CATEGORIES.map((cat, i) => ({
-                    label: cat, data: categoryData[cat], backgroundColor: COLORS[i % COLORS.length], stack: 'stack0'
+                ...nonEfectivoCats.map((cat, i) => ({
+                    label: cat, data: categoryData[cat], backgroundColor: COLORS[CATEGORIES.indexOf(cat) % COLORS.length], stack: 'stack0'
                 })),
                 {
                     type: 'line', label: 'Ingresos (€)', data: monthTotals,
@@ -298,12 +311,12 @@ function updateAnnualChart(endMonth) {
                             const ms = monthKeys[idx];
                             const prices = getEffectivePrices(ms);
                             const lines = [];
-                            CATEGORIES.forEach(cat => {
+                            nonEfectivoCats.forEach(cat => {
                                 const val = categoryData[cat][idx];
                                 const price = prices[cat] || 0;
                                 if (val > 0) lines.push(`${cat}: ${val}${price > 0 ? ` (${(val * price).toFixed(2)}€)` : ''}`);
                             });
-                            lines.push(`─────────────`, `Total: ${CATEGORIES.reduce((s, cat) => s + categoryData[cat][idx], 0)} pacientes`);
+                            lines.push(`─────────────`, `Total: ${nonEfectivoCats.reduce((s, cat) => s + categoryData[cat][idx], 0)} pacientes`);
                             if (monthTotals[idx] > 0) lines.push(`Ingresos: ${monthTotals[idx].toFixed(2)}€`);
                             return lines;
                         }
@@ -464,6 +477,11 @@ async function generateProfessionalPDF() {
     const monthLabel = formatMonth(month);
     const { data } = getMonthData(month);
     const prices = getEffectivePrices(month);
+    
+    const insuredData = {};
+    Object.entries(data).forEach(([cat, count]) => {
+        if (!cat.includes('Efectivo')) insuredData[cat] = count;
+    });
     const commissions = getCommissions();
     const clinicInfo = getClinicInfo();
     const doctor = getCurrentDoctor();
@@ -524,8 +542,7 @@ async function generateProfessionalPDF() {
     let totalPacientes = 0;
     let totalBruto = 0;
 
-    CATEGORIES.forEach(cat => {
-        const count = data[cat] || 0;
+    Object.entries(insuredData).forEach(([cat, count]) => {
         if (count > 0) {
             const price = prices[cat] || 0;
             const total = count * price;
