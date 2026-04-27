@@ -68,6 +68,23 @@ function updateBilling() {
                     <div class="label" id="rangeDiffPct">Diferencia (0%)</div>
                 </div>
             </div>
+            <div style="margin-top:20px;">
+                <div style="font-weight:600; color:var(--text-muted); margin-bottom:8px;">Pendiente por categoría:</div>
+                <div class="table-scroll">
+                    <table style="font-size:0.85rem;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th>Aseguradora</th>
+                                <th class="num" style="text-align:right;">Atendidos</th>
+                                <th class="num" style="text-align:right;">Facturados</th>
+                                <th class="num" style="text-align:right;">Pendiente</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoryPendingBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>`;
         
     el.innerHTML = html;
@@ -97,6 +114,8 @@ function updateBillingRange() {
     
     let totalAttended = 0;
     let totalBilled = 0;
+    const catAttended = {};
+    const catBilled = {};
     
     if (typeof getAvailableMonths !== 'function') return;
     const allMonths = getAvailableMonths().sort();
@@ -105,31 +124,31 @@ function updateBillingRange() {
     if (startMonth > endMonth) { [startMonth, endMonth] = [endMonth, startMonth]; }
     
     let inRange = false;
+    const currentDoctorId = getCurrentDoctorId() || 'doc_default';
+    const entriesKey = 'clinicEntries_' + currentDoctorId;
+    
     allMonths.forEach(m => {
-        if (m === startMonth) inRange = true;
-        if (inRange) {
-            // Sumar atendidos de TODOS los médicos
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && key.startsWith('clinicEntries_')) {
-                    try {
-                        const entries = JSON.parse(localStorage.getItem(key) || '[]').filter(e => e.date.startsWith(m));
-                        totalAttended += entries.reduce((s, e) => s + (parseInt(e.count) || 0), 0);
-                    } catch(e) {}
-                }
-            }
-            // Sumar facturados de TODOS los médicos
-            for (let i = 0; i < localStorage.length; i++) {
-                const bkey = localStorage.key(i);
-                if (bkey && bkey.startsWith('clinicBilling_') && bkey.includes('_' + m + '_')) {
-                    try {
-                        const billData = JSON.parse(localStorage.getItem(bkey) || '{}');
-                        Object.values(billData).forEach(val => totalBilled += parseInt(val) || 0);
-                    } catch(e) {}
-                }
-            }
+        if (m >= startMonth && m <= endMonth) {
+            try {
+                const entries = JSON.parse(localStorage.getItem(entriesKey) || '[]').filter(e => e.date.startsWith(m));
+                const sum = entries.reduce((s, e) => s + (parseInt(e.count) || 0), 0);
+                totalAttended += sum;
+                entries.forEach(e => {
+                    const cat = e.category || 'Sin categoría';
+                    catAttended[cat] = (catAttended[cat] || 0) + (parseInt(e.count) || 0);
+                });
+            } catch(e) {}
+            
+            const billKey = 'clinicBilling_' + m + '_' + currentDoctorId;
+            try {
+                const billData = JSON.parse(localStorage.getItem(billKey) || '{}');
+                Object.entries(billData).forEach(([cat, val]) => {
+                    const cnt = parseInt(val) || 0;
+                    totalBilled += cnt;
+                    catBilled[cat] = (catBilled[cat] || 0) + cnt;
+                });
+            } catch(e) {}
         }
-        if (m === endMonth) inRange = false;
     });
     
     const diff = totalBilled - totalAttended;
@@ -140,6 +159,7 @@ function updateBillingRange() {
     const diffEl = document.getElementById('rangeDiff');
     const diffPctEl = document.getElementById('rangeDiffPct');
     const diffCardEl = document.getElementById('rangeDiffCard');
+    const catBody = document.getElementById('categoryPendingBody');
     
     if (attendedEl) attendedEl.textContent = totalAttended;
     if (billedEl) billedEl.textContent = totalBilled;
@@ -149,6 +169,25 @@ function updateBillingRange() {
     }
     if (diffPctEl) diffPctEl.textContent = `Diferencia (${diffPct}%)`;
     if (diffCardEl) diffCardEl.style.background = diff >= 0 ? '#dcfce7' : '#fee2e2';
+    
+    if (catBody) {
+        const allCats = [...new Set([...Object.keys(catAttended), ...Object.keys(catBilled)])].sort();
+        let rows = '';
+        allCats.forEach(cat => {
+            const att = catAttended[cat] || 0;
+            const bil = catBilled[cat] || 0;
+            const pend = att - bil;
+            if (att > 0 || bil > 0) {
+                rows += `<tr>
+                    <td style="font-weight:500;">${cat}</td>
+                    <td class="num" style="text-align:right;">${att}</td>
+                    <td class="num" style="text-align:right;">${bil}</td>
+                    <td class="num" style="text-align:right; color:${pend > 0 ? '#d97706' : '#27ae60'};">${pend > 0 ? pend : '—'}</td>
+                </tr>`;
+            }
+        });
+        catBody.innerHTML = rows || '<tr><td colspan="4" style="color:#999;text-align:center;">Sin datos</td></tr>';
+    }
 }
 
 function saveBillingData() {
