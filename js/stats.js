@@ -7,7 +7,7 @@ function updateStats() {
     const month = (sel && sel.value) ? sel.value : getCurrentMonth();
 
     const { entries, data } = getMonthData(month);
-    const prices      = getPrices();
+    const prices      = getEffectivePrices(month);
     const commissions = getCommissions();
 
     const total = Object.values(data).reduce((a, b) => a + b, 0);
@@ -463,7 +463,7 @@ async function generateProfessionalPDF() {
     const month = (sel && sel.value) ? sel.value : getCurrentMonth();
     const monthLabel = formatMonth(month);
     const { data } = getMonthData(month);
-    const prices = getPrices();
+    const prices = getEffectivePrices(month);
     const commissions = getCommissions();
     const clinicInfo = getClinicInfo();
     const doctor = getCurrentDoctor();
