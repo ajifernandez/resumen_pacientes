@@ -39,8 +39,6 @@ function renderMonthlyGrid(month) {
     CATEGORIES.forEach(cat => footHTML += `<td id="month_cat_total_${catId(cat)}">0</td>`);
     footHTML += `<td id="month_grand_total">0</td></tr>`;
     foot.innerHTML = footHTML;
-
-    renderQuickEntry();
 }
 
 function renderQuickEntry() {
@@ -138,6 +136,8 @@ function updateMonthlyTotals() {
     if (monthTotalEl) monthTotalEl.textContent = grandTotal;
     const monthDaysEl = document.getElementById('monthDays');
     if (monthDaysEl) monthDaysEl.textContent = daysWorked + ' días trabajados';
+    const countLine = document.getElementById('monthlyCountLine');
+    if (countLine) countLine.textContent = `${grandTotal} pacientes · ${daysWorked} día${daysWorked !== 1 ? 's' : ''} trabajado${daysWorked !== 1 ? 's' : ''}`;
 }
 
 function saveMonth() {
