@@ -566,6 +566,14 @@
                     <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Teléfono</label>
                     <input type="text" id="editDoctorPhone" style="width:100%;">
                 </div>
+                <div style="grid-column:1/1;">
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Comisión Clínica (%)</label>
+                    <input type="number" id="editDoctorComm" step="0.1" style="width:100%;" placeholder="Ej: 30">
+                </div>
+                <div style="grid-column:2/2;">
+                    <label style="display:block; font-size:0.85rem; color:var(--text-muted); font-weight:500; margin-bottom:6px;">Retención IRPF (%)</label>
+                    <input type="number" id="editDoctorIrpf" step="0.1" style="width:100%;" placeholder="Ej: 15">
+                </div>
             </div>
             <div style="margin-top:24px; display:flex; gap:12px; justify-content:flex-end;">
                 <button class="btn btn-outline" onclick="closeEditDoctorModal()">Cancelar</button>

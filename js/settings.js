@@ -93,11 +93,14 @@ function editDoctor(id) {
     const doc = docs.find(d => d.id === id);
     if (!doc) return;
 
+    const comms = getCommissions(doc.id);
     document.getElementById('editDoctorId').value = doc.id;
     document.getElementById('editDoctorName').value = doc.name;
     document.getElementById('editDoctorSpecialty').value = doc.specialty || '';
     document.getElementById('editDoctorNif').value = doc.nif || '';
     document.getElementById('editDoctorPhone').value = doc.phone || '';
+    document.getElementById('editDoctorComm').value = comms.default || 30;
+    document.getElementById('editDoctorIrpf').value = comms.irpf || 15;
 
     document.getElementById('editDoctorModal').style.display = 'flex';
 }
@@ -120,11 +123,18 @@ function saveEditDoctor() {
     doc.nif = document.getElementById('editDoctorNif').value.trim();
     doc.phone = document.getElementById('editDoctorPhone').value.trim();
 
+    // Guardar también comisiones específicas
+    const comms = getCommissions(id);
+    comms.default = parseFloat(document.getElementById('editDoctorComm').value) || 30;
+    comms.irpf = parseFloat(document.getElementById('editDoctorIrpf').value) || 15;
+    saveCommissions(comms, id);
+
     saveDoctors(docs);
     closeEditDoctorModal();
     renderDoctorManager();
     updateDoctorBar();
     updateHeader();
+    loadPrices(); // Refrescar si estábamos en la pestaña de tarifas
     toast('Datos del médico actualizados');
 }
 
@@ -200,7 +210,7 @@ function updateLogoPreview() {
 
 function loadPrices() {
     const prices = getPrices();
-    const comms  = getCommissions();
+    const comms  = getCommissions(); // Usa el médico actual
     const tbody  = document.getElementById('configTableBody');
     if (!tbody) return;
 

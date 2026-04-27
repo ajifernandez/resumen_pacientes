@@ -174,12 +174,14 @@ function getEffectivePrices(month) {
     return { ...base, ...overrides };
 }
 
-function getCommissions() {
-    return JSON.parse(localStorage.getItem(dk('clinicCommissions')) || '{}');
+function getCommissions(specificId) {
+    const key = specificId ? `clinicCommissions_${specificId}` : dk('clinicCommissions');
+    return JSON.parse(localStorage.getItem(key) || '{}');
 }
 
-function saveCommissions(comm) {
-    localStorage.setItem(dk('clinicCommissions'), JSON.stringify(comm));
+function saveCommissions(comm, specificId) {
+    const key = specificId ? `clinicCommissions_${specificId}` : dk('clinicCommissions');
+    localStorage.setItem(key, JSON.stringify(comm));
 }
 
 function effectiveCommission(cat, commissions) {
