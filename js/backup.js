@@ -21,11 +21,51 @@ function saveClientId(id) {
 function updateDataTab() {
     const clientIdInput = document.getElementById('google-client-id');
     if (clientIdInput) clientIdInput.value = getClientId();
-    
-    // Si tenemos un token guardado, actualizar la UI
-    if (accessToken && !isTokenExpired()) {
-        updateDriveUI(true);
+
+    if (accessToken && !isTokenExpired()) updateDriveUI(true);
+
+    const el = document.getElementById('dataStats');
+    if (!el) return;
+
+    const doctors = getDoctors();
+    let totalEntries = 0;
+    const months = new Set();
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('clinicEntries_')) {
+            try {
+                const entries = JSON.parse(localStorage.getItem(key) || '[]');
+                totalEntries += entries.length;
+                entries.forEach(e => { if (e.date) months.add(e.date.substring(0, 7)); });
+            } catch(e) {}
+        }
     }
+
+    let lsBytes = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        lsBytes += (key.length + (localStorage.getItem(key) || '').length) * 2;
+    }
+    const lsKB = (lsBytes / 1024).toFixed(1);
+
+    el.innerHTML = `
+        <div class="stat-card">
+            <div class="number">${doctors.length}</div>
+            <div class="label">Médicos</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">${totalEntries}</div>
+            <div class="label">Registros</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">${months.size}</div>
+            <div class="label">Meses con datos</div>
+        </div>
+        <div class="stat-card">
+            <div class="number" style="font-size:1.2rem;">${lsKB} KB</div>
+            <div class="label">Espacio usado</div>
+        </div>`;
 }
 
 function isTokenExpired() {
@@ -184,7 +224,8 @@ function exportToJSON(returnString = false) {
         allEntries: {},
         allPrices: {},
         allComms: {},
-        allOverrides: {}
+        allOverrides: {},
+        allBilling: {}
     };
 
     const docs = getDoctors();
@@ -195,6 +236,13 @@ function exportToJSON(returnString = false) {
         backup.allComms[id]     = JSON.parse(localStorage.getItem(`clinicCommissions_${id}`) || '{}');
         backup.allOverrides[id] = JSON.parse(localStorage.getItem(`clinicPriceOverrides_${id}`) || '{}');
     });
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('clinicBilling_')) {
+            backup.allBilling[key.slice('clinicBilling_'.length)] = JSON.parse(localStorage.getItem(key) || '{}');
+        }
+    }
 
     const json = JSON.stringify(backup, null, 2);
     if (returnString) return json;
@@ -270,7 +318,8 @@ function importJSON() {
                     if (data.allPrices)    Object.keys(data.allPrices).forEach(id => localStorage.setItem(`clinicPrices_${id}`, JSON.stringify(data.allPrices[id])));
                     if (data.allComms)     Object.keys(data.allComms).forEach(id => localStorage.setItem(`clinicCommissions_${id}`, JSON.stringify(data.allComms[id])));
                     if (data.allOverrides) Object.keys(data.allOverrides).forEach(id => localStorage.setItem(`clinicPriceOverrides_${id}`, JSON.stringify(data.allOverrides[id])));
-                    
+                    if (data.allBilling)   Object.keys(data.allBilling).forEach(k => localStorage.setItem(`clinicBilling_${k}`, JSON.stringify(data.allBilling[k])));
+
                     location.reload();
                 } else {
                     // Formato antiguo o parcial
@@ -295,4 +344,46 @@ function importJSON() {
         reader.readAsText(file);
     };
     input.click();
+}
+
+function importFromJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = f => {
+        try {
+            const data = JSON.parse(f.target.result);
+            if (data.version === 2) {
+                if (!confirm('Este archivo contiene una copia completa de configuración y datos de todos los médicos. ¿Deseas restaurarla? Esto sobrescribirá los datos actuales.')) return;
+                localStorage.clear();
+                if (data.doctors) saveDoctors(data.doctors);
+                if (data.clinicInfo) localStorage.setItem('clinicInfo', JSON.stringify(data.clinicInfo));
+                if (data.clinicLogo) localStorage.setItem('clinicLogo', data.clinicLogo);
+                if (data.allEntries)   Object.keys(data.allEntries).forEach(id => localStorage.setItem(`clinicEntries_${id}`, JSON.stringify(data.allEntries[id])));
+                if (data.allPrices)    Object.keys(data.allPrices).forEach(id => localStorage.setItem(`clinicPrices_${id}`, JSON.stringify(data.allPrices[id])));
+                if (data.allComms)     Object.keys(data.allComms).forEach(id => localStorage.setItem(`clinicCommissions_${id}`, JSON.stringify(data.allComms[id])));
+                if (data.allOverrides) Object.keys(data.allOverrides).forEach(id => localStorage.setItem(`clinicPriceOverrides_${id}`, JSON.stringify(data.allOverrides[id])));
+                if (data.allBilling)   Object.keys(data.allBilling).forEach(k => localStorage.setItem(`clinicBilling_${k}`, JSON.stringify(data.allBilling[k])));
+                location.reload();
+            } else {
+                const mode = document.querySelector('input[name="importMode"]:checked').value;
+                const entriesData = data.entries || data.monthlyEntries || [];
+                if (mode === 'replace') {
+                    saveEntries(entriesData);
+                    if (data.prices) savePricesToStorage(data.prices);
+                    toast('Datos importados (Reemplazar)', 'success');
+                } else {
+                    const current = getEntries();
+                    saveEntries([...current, ...entriesData]);
+                    toast('Datos importados (Añadir)', 'success');
+                }
+                setTimeout(() => location.reload(), 1000);
+            }
+        } catch(err) {
+            console.error(err);
+            toast('Error al importar el archivo JSON', 'danger');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
 }

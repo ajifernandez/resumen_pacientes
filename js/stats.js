@@ -11,7 +11,7 @@ function updateStats() {
     const commissions = getCommissions();
 
     const insuredData = {};
-    Object.entries(data).forEach(([cat, count]) => {
+    Object.entries(data).forEach(([cat, count]) => { 
         if (!cat.includes('Efectivo')) insuredData[cat] = count;
     });
 
@@ -598,4 +598,103 @@ async function generateProfessionalPDF() {
 
     doc.save(`Informe_${doctor?.name || 'Clinica'}_${month}.pdf`);
     toast('PDF generado correctamente', 'success');
+}
+
+// ── Vista Global ───────────────────────────────────────────────────────────
+function updateGlobal() {
+    const el = document.getElementById('globalContent');
+    if (!el) return;
+
+    const month = document.getElementById('globalMonthSelect')?.value;
+    if (!month) { el.innerHTML = '<p style="color:var(--text-muted)">Selecciona un mes.</p>'; return; }
+
+    const doctors = getDoctors();
+    if (!doctors.length) { el.innerHTML = '<p style="color:var(--text-muted)">No hay médicos registrados.</p>'; return; }
+
+    let totalPacientes = 0, totalBruto = 0, totalRetencion = 0, totalNeto = 0, totalIrpf = 0, totalFinal = 0;
+
+    const rows = doctors.map(doc => {
+        const entries = JSON.parse(localStorage.getItem(`clinicEntries_${doc.id}`) || '[]')
+            .filter(e => e.date.startsWith(month));
+        if (!entries.length) return null;
+
+        const prices    = { ...DEFAULT_PRICES, ...JSON.parse(localStorage.getItem(`clinicPrices_${doc.id}`) || '{}') };
+        const overrides = JSON.parse(localStorage.getItem(`clinicPriceOverrides_${doc.id}`) || '{}');
+        const effPrices = { ...prices, ...(overrides[month] || {}) };
+        const comms     = JSON.parse(localStorage.getItem(`clinicCommissions_${doc.id}`) || '{}');
+        const irpfPct   = comms.irpf || 0;
+
+        let pacientes = 0, bruto = 0, retencion = 0;
+        entries.forEach(e => {
+            if (e.category && e.category.toLowerCase().includes('efectivo')) return;
+            const price   = effPrices[e.category] || 0;
+            const gross   = (e.count || 0) * price;
+            const commPct = effectiveCommission(e.category, comms);
+            pacientes += (e.count || 0);
+            bruto     += gross;
+            retencion += gross * (commPct / 100);
+        });
+
+        const neto  = bruto - retencion;
+        const irpf  = neto * (irpfPct / 100);
+        const final = neto - irpf;
+
+        totalPacientes += pacientes;
+        totalBruto     += bruto;
+        totalRetencion += retencion;
+        totalNeto      += neto;
+        totalIrpf      += irpf;
+        totalFinal     += final;
+
+        const commLabel = comms.default !== undefined ? `${comms.default}%` : '—';
+        const irpfLabel = irpfPct > 0 ? `${irpfPct}%` : '—';
+
+        return `<tr>
+            <td style="padding:8px 4px;">${doc.name}</td>
+            <td style="text-align:right; padding:8px 4px;">${pacientes}</td>
+            <td style="text-align:right; padding:8px 4px;">${bruto.toFixed(2)} €</td>
+            <td style="text-align:right; padding:8px 4px; color:#e74c3c;">− ${retencion.toFixed(2)} €</td>
+            <td style="text-align:right; padding:8px 4px;">${commLabel}</td>
+            <td style="text-align:right; padding:8px 4px;">${neto.toFixed(2)} €</td>
+            <td style="text-align:right; padding:8px 4px; color:#d97706;">${irpf > 0 ? `− ${irpf.toFixed(2)} €` : '—'}</td>
+            <td style="text-align:right; padding:8px 4px;">${irpfLabel}</td>
+            <td style="text-align:right; padding:8px 4px; font-weight:600; color:#27ae60;">${final.toFixed(2)} €</td>
+        </tr>`;
+    }).filter(Boolean);
+
+    if (!rows.length) {
+        el.innerHTML = `<p style="color:var(--text-muted)">Sin datos para ${formatMonth(month)}.</p>`;
+        return;
+    }
+
+    el.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border-color); color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
+                    <th style="text-align:left; padding:8px 4px;">Médico</th>
+                    <th style="text-align:right; padding:8px 4px;">Pacientes</th>
+                    <th style="text-align:right; padding:8px 4px;">Bruto</th>
+                    <th style="text-align:right; padding:8px 4px;">Retención</th>
+                    <th style="text-align:right; padding:8px 4px;">% Clínica</th>
+                    <th style="text-align:right; padding:8px 4px;">Neto</th>
+                    <th style="text-align:right; padding:8px 4px;">IRPF</th>
+                    <th style="text-align:right; padding:8px 4px;">% IRPF</th>
+                    <th style="text-align:right; padding:8px 4px;">Final</th>
+                </tr>
+            </thead>
+            <tbody>${rows.join('')}</tbody>
+            <tfoot>
+                <tr style="border-top:2px solid var(--border-color); font-weight:700;">
+                    <td style="padding:8px 4px;">Total</td>
+                    <td style="text-align:right; padding:8px 4px;">${totalPacientes}</td>
+                    <td style="text-align:right; padding:8px 4px;">${totalBruto.toFixed(2)} €</td>
+                    <td style="text-align:right; padding:8px 4px; color:#e74c3c;">− ${totalRetencion.toFixed(2)} €</td>
+                    <td style="padding:8px 4px;"></td>
+                    <td style="text-align:right; padding:8px 4px;">${totalNeto.toFixed(2)} €</td>
+                    <td style="text-align:right; padding:8px 4px; color:#d97706;">${totalIrpf > 0 ? `− ${totalIrpf.toFixed(2)} €` : '—'}</td>
+                    <td style="padding:8px 4px;"></td>
+                    <td style="text-align:right; padding:8px 4px; color:#27ae60;">${totalFinal.toFixed(2)} €</td>
+                </tr>
+            </tfoot>
+        </table>`;
 }

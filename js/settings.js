@@ -249,7 +249,7 @@ function savePrices() {
 }
 
 function saveConfigCategories() {
-    const cats = (_pendingCategories || CATEGORIES).filter(c => c.trim().length > 0);
+    const cats = (_pendingCategories || CATEGORIES).filter(c => c.trim().length > 0).sort((x,y) => x.localeCompare(y, 'es'));
     if (cats.length === 0) { toast('Añade al menos una categoría', 'warning'); return; }
     localStorage.setItem(dk('clinicCategories'), JSON.stringify(cats));
     refreshCategories();
@@ -280,6 +280,7 @@ function renderCategoryList() {
         <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
             <span style="width:14px; height:14px; border-radius:3px; background:${COLOR_PALETTE[i % COLOR_PALETTE.length]}; flex-shrink:0;"></span>
             <span style="flex:1; font-size:0.95rem;">${cat}</span>
+            <button class="btn btn-sm" style="background:var(--accent); color:#fff;" onclick="renameCategory(${i})">✏️</button>
             <button class="btn btn-danger btn-sm" onclick="pendingRemoveCategory(${i})">×</button>
         </div>
     `).join('');
@@ -298,6 +299,7 @@ function addCategory() {
     if (!_pendingCategories) _pendingCategories = CATEGORIES.slice();
     if (_pendingCategories.includes(name)) { toast('Esa categoría ya existe', 'warning'); return; }
     _pendingCategories.push(name);
+    _pendingCategories.sort((x,y) => x.localeCompare(y, 'es'));
     input.value = '';
     renderCategoryList();
 }
@@ -305,9 +307,90 @@ function addCategory() {
 function loadPreset(name) {
     const preset = SPECIALTY_PRESETS[name];
     if (!preset) return;
-    _pendingCategories = preset.slice();
+    _pendingCategories = preset.slice().sort((x,y) => x.localeCompare(y, 'es'));
     renderCategoryList();
     toast(`Preset "${name}" cargado`);
+}
+
+function renameCategory(idx) {
+    if (!_pendingCategories) _pendingCategories = CATEGORIES.slice();
+    const oldName = _pendingCategories[idx];
+    const newName = prompt(`Nuevo nombre para "${oldName}":`, oldName);
+    if (!newName || !newName.trim()) return;
+    const trimmed = newName.trim();
+    if (trimmed === oldName) return;
+    if (_pendingCategories.includes(trimmed)) { toast('Esa categoría ya existe', 'warning'); return; }
+
+    const isSaved = CATEGORIES.includes(oldName);
+    _pendingCategories[idx] = trimmed;
+    _pendingCategories.sort((x,y) => x.localeCompare(y, 'es'));
+
+    if (isSaved) propagateCategoryRename(oldName, trimmed);
+    renderCategoryList();
+    toast(`"${oldName}" → "${trimmed}"${isSaved ? ' (datos actualizados)' : ''}`);
+}
+
+function propagateCategoryRename(oldName, newName) {
+    const doctors = getDoctors();
+
+    doctors.forEach(doc => {
+        const id = doc.id;
+
+        // Entries
+        const entriesKey = `clinicEntries_${id}`;
+        const entries = JSON.parse(localStorage.getItem(entriesKey) || '[]');
+        const updatedEntries = entries.map(e => e.category === oldName ? { ...e, category: newName } : e);
+        localStorage.setItem(entriesKey, JSON.stringify(updatedEntries));
+
+        // Prices
+        const pricesKey = `clinicPrices_${id}`;
+        const prices = JSON.parse(localStorage.getItem(pricesKey) || '{}');
+        if (oldName in prices) {
+            prices[newName] = prices[oldName];
+            delete prices[oldName];
+            localStorage.setItem(pricesKey, JSON.stringify(prices));
+        }
+
+        // Commissions
+        const commsKey = `clinicCommissions_${id}`;
+        const comms = JSON.parse(localStorage.getItem(commsKey) || '{}');
+        if (oldName in comms) {
+            comms[newName] = comms[oldName];
+            delete comms[oldName];
+            localStorage.setItem(commsKey, JSON.stringify(comms));
+        }
+
+        // Price overrides (each month)
+        const overridesKey = `clinicPriceOverrides_${id}`;
+        const overrides = JSON.parse(localStorage.getItem(overridesKey) || '{}');
+        let overridesChanged = false;
+        Object.keys(overrides).forEach(month => {
+            if (oldName in overrides[month]) {
+                overrides[month][newName] = overrides[month][oldName];
+                delete overrides[month][oldName];
+                overridesChanged = true;
+            }
+        });
+        if (overridesChanged) localStorage.setItem(overridesKey, JSON.stringify(overrides));
+
+        // Billing data
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(`clinicBilling_`) && key.endsWith(`_${id}`)) {
+                const billing = JSON.parse(localStorage.getItem(key) || '{}');
+                if (oldName in billing) {
+                    billing[newName] = billing[oldName];
+                    delete billing[oldName];
+                    localStorage.setItem(key, JSON.stringify(billing));
+                }
+            }
+        }
+    });
+
+    // Update global category list in localStorage
+    const saved = JSON.parse(localStorage.getItem('clinicCategories') || '[]');
+    const idx = saved.indexOf(oldName);
+    if (idx !== -1) { saved[idx] = newName; localStorage.setItem('clinicCategories', JSON.stringify(saved)); }
 }
 
 // Las funciones de exportación e importación se han movido a js/backup.js

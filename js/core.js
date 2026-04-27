@@ -35,9 +35,9 @@ loadTheme();
 let CATEGORIES = (() => {
     try {
         const s = localStorage.getItem('clinicCategories');
-        if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) return a; }
+        if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) return a.sort((x,y) => x.localeCompare(y, 'es')); }
     } catch(e) {}
-    return DEFAULT_CATEGORIES.slice();
+    return DEFAULT_CATEGORIES.slice().sort((x,y) => x.localeCompare(y, 'es'));
 })();
 let COLORS = CATEGORIES.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]);
 
@@ -235,9 +235,9 @@ function formatCurrency(val) {
 function refreshCategories() {
     try {
         const s = localStorage.getItem(dk('clinicCategories'));
-        if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) { CATEGORIES = a; COLORS = a.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]); return; } }
+        if (s) { const a = JSON.parse(s); if (Array.isArray(a) && a.length > 0) { CATEGORIES = a.sort((x,y) => x.localeCompare(y, 'es')); COLORS = CATEGORIES.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]); return; } }
     } catch(e) {}
-    CATEGORIES = DEFAULT_CATEGORIES.slice();
+    CATEGORIES = DEFAULT_CATEGORIES.slice().sort((x,y) => x.localeCompare(y, 'es'));
     COLORS = CATEGORIES.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]);
 }
 
@@ -267,4 +267,11 @@ function downloadFile(content, fileName, contentType) {
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(a.href);
+}
+
+function clearAllData() {
+    if (!confirm('¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) return;
+    localStorage.clear();
+    toast('Todos los datos eliminados.', 'error');
+    setTimeout(() => location.reload(), 1500);
 }

@@ -303,8 +303,7 @@ function generateInvoice() {
     const monthLabel    = formatMonth(month);
     const today         = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
     const orderNum      = `PO-${month.replace('-', '')}`;
-    const defaultCommPct = commissions['_default'];
-    const irpfPct       = commissions['_irpf'] !== undefined ? commissions['_irpf'] : 0;
+    const irpfPct = commissions.irpf !== undefined ? commissions.irpf : 0;
 
     const doc        = getCurrentDoctor();
     const clinicLogo = localStorage.getItem('clinicLogo');
