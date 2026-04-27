@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateDoctorBar();
     updateHeader();
     
+    // Inicializar Google Drive
+    if (typeof initGoogleDrive === 'function') initGoogleDrive();
+    
     // Cargar Client ID si existe
     const googleClientIdInput = document.getElementById('google-client-id');
     if (googleClientIdInput) googleClientIdInput.value = getClientId();

@@ -2,7 +2,8 @@
  * backup.js - Sincronización Google Drive y Backups Locales
  */
 
-let accessToken = null;
+let accessToken = localStorage.getItem('clinicGoogleAccessToken');
+let tokenExpiry = localStorage.getItem('clinicGoogleTokenExpiry');
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 function getClientId() {
@@ -18,9 +19,33 @@ function saveClientId(id) {
 }
 
 function updateDataTab() {
-    // El contenido de la pestaña datos está en el HTML, no necesita actualización dinámica
     const clientIdInput = document.getElementById('google-client-id');
     if (clientIdInput) clientIdInput.value = getClientId();
+    
+    // Si tenemos un token guardado, actualizar la UI
+    if (accessToken && !isTokenExpired()) {
+        updateDriveUI(true);
+    }
+}
+
+function isTokenExpired() {
+    if (!accessToken || !tokenExpiry) return true;
+    return Date.now() > parseInt(tokenExpiry);
+}
+
+function initGoogleDrive() {
+    // Verificar si el token sigue siendo válido al cargar
+    if (accessToken && !isTokenExpired()) {
+        updateDriveUI(true);
+        console.log('Google Drive: Sesión restaurada');
+    } else if (accessToken) {
+        // Token expirado, limpiar
+        accessToken = null;
+        tokenExpiry = null;
+        localStorage.removeItem('clinicGoogleAccessToken');
+        localStorage.removeItem('clinicGoogleTokenExpiry');
+        updateDriveUI(false);
+    }
 }
 
 function connectGoogleDrive() {
@@ -32,7 +57,6 @@ function connectGoogleDrive() {
 
     if (typeof google === 'undefined') {
         toast('Cargando librería de Google...', 'info');
-        // Reintentar en 2s si la librería no ha cargado
         setTimeout(connectGoogleDrive, 2000);
         return;
     }
@@ -43,6 +67,14 @@ function connectGoogleDrive() {
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 accessToken = tokenResponse.access_token;
+                // Los tokens de Google suelen durar 3600 segundos (1 hora)
+                // Restamos un margen de 2 minutos por seguridad
+                const expiresIn = (tokenResponse.expires_in || 3600) - 120;
+                tokenExpiry = Date.now() + (expiresIn * 1000);
+                
+                localStorage.setItem('clinicGoogleAccessToken', accessToken);
+                localStorage.setItem('clinicGoogleTokenExpiry', tokenExpiry);
+                
                 updateDriveUI(true);
                 toast('Conectado a Google Drive', 'success');
                 syncToGoogleDrive();
@@ -50,11 +82,15 @@ function connectGoogleDrive() {
         },
     });
 
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+    const canReauthSilently = accessToken && !isTokenExpired();
+    tokenClient.requestAccessToken({ prompt: canReauthSilently ? '' : 'select_account' });
 }
 
 function disconnectGoogleDrive() {
     accessToken = null;
+    tokenExpiry = null;
+    localStorage.removeItem('clinicGoogleAccessToken');
+    localStorage.removeItem('clinicGoogleTokenExpiry');
     updateDriveUI(false);
     toast('Desconectado de Google Drive', 'info');
 }
@@ -76,7 +112,13 @@ function updateDriveUI(connected) {
 }
 
 async function syncToGoogleDrive() {
-    if (!accessToken) return;
+    if (!accessToken || isTokenExpired()) {
+        if (accessToken) {
+            toast('La sesión de Google ha expirado. Reconectando...', 'info');
+            connectGoogleDrive();
+        }
+        return;
+    }
 
     toast('Sincronizando con Drive...', 'info');
     const data = exportToJSON(true); 
