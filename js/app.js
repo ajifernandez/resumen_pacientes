@@ -117,7 +117,9 @@ function getAvailableMonths() {
 }
 
 /** Utility to toggle visibility of datasets in charts */
-function toggleDataset(chart, index) {
+function toggleDataset(chartOrKey, index) {
+    const chart = typeof chartOrKey === 'string' ? chartMap[chartOrKey] : chartOrKey;
+    if (!chart) return;
     const meta = chart.getDatasetMeta(index);
     meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
     chart.update();

@@ -337,12 +337,13 @@ function updateAnnualChart(endMonth) {
 function renderLegend(chart, containerId) {
     const el = document.getElementById(containerId);
     if (!el) return;
+    const chartKey = containerId.replace('legend-', '');
     el.innerHTML = chart.data.datasets
         .filter(ds => ds.label && ds.type !== 'line')
         .map((ds, i) => `
-            <div class="legend-item" onclick="toggleDataset(${chartMap[containerId.replace('legend-','')] ? Object.keys(chartMap).find(k => 'legend-'+k === containerId) : ''}, ${i})">
-                <span class="legend-color" style="background:${ds.backgroundColor}"></span>
-                <span class="legend-label">${ds.label}</span>
+            <div class="legend-pill" onclick="toggleDataset('${chartKey}', ${i})">
+                <span class="swatch" style="background:${ds.backgroundColor}"></span>
+                <span>${ds.label}</span>
             </div>
         `).join('');
 }

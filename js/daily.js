@@ -5,9 +5,9 @@
 function initDailyTable() {
     const el = document.getElementById('dailyTableBody');
     if (!el) return;
-    el.innerHTML = CATEGORIES.map(cat => `
+    el.innerHTML = CATEGORIES.map((cat, i) => `
         <tr class="category-row">
-            <td>${cat}</td>
+            <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLORS[i]};margin-right:6px;flex-shrink:0;"></span>${cat}</td>
             <td>
                 <input type="number" id="day_${catId(cat)}"
                        min="0" value="0" oninput="updateDayTotal()">

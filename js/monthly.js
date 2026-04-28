@@ -13,7 +13,7 @@ function renderMonthlyGrid(month) {
     if (!head || !body || !foot) return;
     
     let headHTML = '<tr><th>Día</th>';
-    CATEGORIES.forEach(cat => headHTML += `<th>${cat}</th>`);
+    CATEGORIES.forEach((cat, i) => headHTML += `<th><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${COLORS[i]};margin-right:4px;"></span>${cat}</th>`);
     headHTML += '<th class="monthly-total-col">Total Día</th></tr>';
     head.innerHTML = headHTML;
     
