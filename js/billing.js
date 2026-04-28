@@ -2,54 +2,148 @@
  * billing.js - Facturación e Informes
  */
 
+// ── Modelo de datos ────────────────────────────────────────────────────────
+// Formato: { cat: { billed: N, paid: N } }
+// Migración automática desde formato antiguo: { cat: N }
+
+function loadBillingData(key) {
+    let data = {};
+    try { data = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+    let migrated = false;
+    Object.keys(data).forEach(cat => {
+        if (typeof data[cat] === 'number') {
+            data[cat] = { billed: data[cat], paid: 0 };
+            migrated = true;
+        }
+    });
+    if (migrated) localStorage.setItem(key, JSON.stringify(data));
+    return data;
+}
+
+// Llamado desde el popup de Payment Order para persistir cobrados
+function savePaidFromInvoice(month, doctorId, paidData) {
+    const key = 'clinicBilling_' + month + '_' + doctorId;
+    const billingData = loadBillingData(key);
+    Object.keys(paidData).forEach(cat => {
+        if (!billingData[cat]) billingData[cat] = { billed: 0, paid: 0 };
+        billingData[cat].paid = paidData[cat];
+    });
+    localStorage.setItem(key, JSON.stringify(billingData));
+    if (document.getElementById('billing-tab')?.style.display === 'block') updateBilling();
+    toast('Cobros actualizados desde Payment Order', 'success');
+}
+
 function initBilling() {
     updateBilling();
 }
 
 function updateBilling() {
     const sel = document.getElementById('globalMonthSelect');
-    if (!sel || !sel.value) {
-        setTimeout(updateBilling, 100);
-        return;
-    }
-    const month = sel.value;
+    if (!sel || !sel.value) { setTimeout(updateBilling, 100); return; }
+    const month    = sel.value;
     const doctorId = getCurrentDoctorId() || 'doc_default';
-    
-    // Tabla de edición de facturación
-    const prices = getEffectivePrices(month);
-    const billingKey = 'clinicBilling_' + month + '_' + doctorId;
-    let billingData = {};
-    try { billingData = JSON.parse(localStorage.getItem(billingKey)) || {}; } catch(e) {}
+    const prices   = getEffectivePrices(month);
+    const key      = 'clinicBilling_' + month + '_' + doctorId;
+    const billingData = loadBillingData(key);
+    const { data: attended } = getMonthData(month);
 
     const el = document.getElementById('billingContent');
     if (!el) return;
 
-    let html = `<div style="margin-bottom:12px; color:var(--text-muted); font-size:0.9rem; font-weight:600;">Editando: ${formatMonth(month)}</div>`;
-    html += '<div class="table-scroll"><table><thead><tr>';
-    html += '<th>Aseguradora</th><th style="text-align:right;">Precio (€)</th><th style="text-align:right;">Facturados</th><th style="text-align:right;">Total (€)</th>';
-    html += '</tr></thead><tbody>';
+    let totalAttended = 0, totalBilled = 0, totalPaid = 0, totalPending = 0;
 
-    let totalMonthBilled = 0, totalMonthReceived = 0;
+    const rows = CATEGORIES.map((cat, ci) => {
+        const price     = prices[cat] || 0;
+        const att       = attended[cat] || 0;
+        const entry     = billingData[cat] || { billed: 0, paid: 0 };
+        const billed    = entry.billed || 0;
+        const paid      = entry.paid   || 0;
+        const pending   = Math.max(0, billed - paid) * price;
+        const pct       = billed > 0 ? Math.round((paid / billed) * 100) : 0;
+        const barColor  = pct === 100 ? '#22c55e' : pct > 0 ? '#f59e0b' : '#e2e8f0';
+        const barFill   = pct === 100 ? '#22c55e' : pct > 0 ? '#f59e0b' : '#cbd5e1';
 
-    CATEGORIES.forEach(cat => {
-        const price = prices[cat] || 0;
-        const billedCount = billingData[cat] || 0;
-        const received = billedCount * price;
+        totalAttended += att;
+        totalBilled   += billed;
+        totalPaid     += paid;
+        totalPending  += pending;
 
-        totalMonthBilled += billedCount;
-        totalMonthReceived += received;
+        return `<tr>
+            <td style="font-weight:600;">
+                <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${COLORS[ci]};margin-right:6px;"></span>${cat}
+            </td>
+            <td style="text-align:right; color:var(--primary);">${price > 0 ? price.toFixed(2) : '—'}</td>
+            <td style="text-align:right; color:var(--text-muted);">${att || '—'}</td>
+            <td style="text-align:right;">
+                <input type="number" id="bill_${catId(cat)}" value="${billed}" min="0"
+                       style="width:70px; text-align:center; padding:4px 6px;" oninput="recalcBillingRow('${cat}')">
+            </td>
+            <td style="text-align:right;">
+                <input type="number" id="paid_${catId(cat)}" value="${paid}" min="0"
+                       style="width:70px; text-align:center; padding:4px 6px;" oninput="recalcBillingRow('${cat}')">
+            </td>
+            <td style="min-width:80px; padding:0 8px;">
+                <div style="background:#e2e8f0; border-radius:4px; height:8px; overflow:hidden;">
+                    <div style="height:100%; width:${pct}%; background:${barFill}; border-radius:4px; transition:width 0.3s;"></div>
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-muted); text-align:center; margin-top:2px;">${pct}%</div>
+            </td>
+            <td style="text-align:right; font-weight:600; color:${pending > 0 ? '#d97706' : '#22c55e'};" id="pending_eur_${catId(cat)}">
+                ${pending > 0 ? pending.toFixed(2) + ' €' : '✓'}
+            </td>
+        </tr>`;
+    }).join('');
 
-        html += `<tr><td style="font-weight:600;">${cat}</td>`;
-        html += `<td style="text-align:right; color:var(--primary);">${price > 0 ? price.toFixed(2) : '—'}</td>`;
-        html += `<td style="text-align:right;"><input type="number" id="bill_${catId(cat)}" value="${billedCount}" min="0" style="width:80px; text-align:center; padding:6px;"></td>`;
-        html += `<td style="text-align:right; font-weight:600;">${received > 0 ? received.toFixed(2) : '—'}</td></tr>`;
-    });
+    const pendingTotal = totalPending;
+    const cobradoEur   = totalPaid > 0 ? (CATEGORIES.reduce((s, cat) => {
+        const entry = billingData[cat] || { paid: 0 };
+        return s + (entry.paid || 0) * (prices[cat] || 0);
+    }, 0)) : 0;
 
-    html += `<tr style="background:#f0fdfa; font-weight:700; border-top:2px solid #5eead4;">
-        <td>TOTAL</td><td></td>
-        <td style="text-align:right;">${totalMonthBilled}</td>
-        <td style="text-align:right;">${totalMonthReceived.toFixed(2)}</td>
-    </tr></tbody></table></div>`;
+    let html = `
+        <div style="margin-bottom:16px; color:var(--text-muted); font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">
+            ${formatMonth(month)}
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+            <div class="stat-card" style="flex:1; min-width:120px;">
+                <div class="number">${totalAttended}</div><div class="label">Atendidos</div>
+            </div>
+            <div class="stat-card" style="flex:1; min-width:120px;">
+                <div class="number">${totalBilled}</div><div class="label">Facturados</div>
+            </div>
+            <div class="stat-card" style="flex:1; min-width:120px; background:linear-gradient(135deg,#22c55e,#16a34a);">
+                <div class="number" style="color:white;">${totalPaid}</div><div class="label" style="color:rgba(255,255,255,0.85);">Cobrados</div>
+            </div>
+            <div class="stat-card" style="flex:1; min-width:120px; background:${pendingTotal > 0 ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#22c55e,#16a34a)'};">
+                <div class="number" style="color:white; font-size:1.1rem;">${pendingTotal > 0 ? pendingTotal.toFixed(0) + ' €' : '✓'}</div>
+                <div class="label" style="color:rgba(255,255,255,0.85);">Pendiente</div>
+            </div>
+        </div>
+        <div class="table-scroll">
+        <table>
+            <thead><tr>
+                <th>Aseguradora</th>
+                <th style="text-align:right;">Precio</th>
+                <th style="text-align:right;">Atendidos</th>
+                <th style="text-align:right;">Facturados</th>
+                <th style="text-align:right;">Cobrados</th>
+                <th style="text-align:center;">Progreso</th>
+                <th style="text-align:right;">Pendiente (€)</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr style="font-weight:700; border-top:2px solid var(--border-color);">
+                <td>TOTAL</td>
+                <td></td>
+                <td style="text-align:right;">${totalAttended}</td>
+                <td style="text-align:right;">${totalBilled}</td>
+                <td style="text-align:right;">${totalPaid}</td>
+                <td></td>
+                <td style="text-align:right; color:${pendingTotal > 0 ? '#d97706' : '#22c55e'};">
+                    ${pendingTotal > 0 ? pendingTotal.toFixed(2) + ' €' : '✓ Todo cobrado'}
+                </td>
+            </tr></tfoot>
+        </table>
+        </div>`;
     
     // Añadir sección de resumen de rango
     html += `
@@ -141,9 +235,9 @@ function updateBillingRange() {
             
             const billKey = 'clinicBilling_' + m + '_' + currentDoctorId;
             try {
-                const billData = JSON.parse(localStorage.getItem(billKey) || '{}');
+                const billData = loadBillingData(billKey);
                 Object.entries(billData).forEach(([cat, val]) => {
-                    const cnt = parseInt(val) || 0;
+                    const cnt = typeof val === 'object' ? (val.billed || 0) : (parseInt(val) || 0);
                     totalBilled += cnt;
                     catBilled[cat] = (catBilled[cat] || 0) + cnt;
                 });
@@ -190,19 +284,37 @@ function updateBillingRange() {
     }
 }
 
+function recalcBillingRow(cat) {
+    const month    = document.getElementById('globalMonthSelect')?.value;
+    const prices   = getEffectivePrices(month);
+    const price    = prices[cat] || 0;
+    const billed   = parseInt(document.getElementById('bill_' + catId(cat))?.value) || 0;
+    const paid     = parseInt(document.getElementById('paid_' + catId(cat))?.value) || 0;
+    const pending  = Math.max(0, billed - paid) * price;
+    const el       = document.getElementById('pending_eur_' + catId(cat));
+    if (el) {
+        el.textContent = pending > 0 ? pending.toFixed(2) + ' €' : '✓';
+        el.style.color = pending > 0 ? '#d97706' : '#22c55e';
+    }
+}
+
 function saveBillingData() {
-    const month = document.getElementById('globalMonthSelect').value;
-    const billingData = {};
+    const month    = document.getElementById('globalMonthSelect').value;
+    const doctorId = getCurrentDoctorId() || 'doc_default';
+    const key      = 'clinicBilling_' + month + '_' + doctorId;
+    const billingData = loadBillingData(key);
     CATEGORIES.forEach(cat => {
-        const input = document.getElementById('bill_' + catId(cat));
-        if (input && parseInt(input.value) > 0) {
-            billingData[cat] = parseInt(input.value);
+        const billed = parseInt(document.getElementById('bill_' + catId(cat))?.value) || 0;
+        const paid   = parseInt(document.getElementById('paid_' + catId(cat))?.value) || 0;
+        if (billed > 0 || paid > 0) {
+            billingData[cat] = { billed, paid };
+        } else {
+            delete billingData[cat];
         }
     });
-    const doctorId = getCurrentDoctorId() || 'doc_default';
-    localStorage.setItem('clinicBilling_' + month + '_' + doctorId, JSON.stringify(billingData));
+    localStorage.setItem(key, JSON.stringify(billingData));
     updateBilling();
-    toast('Datos de facturación guardados', 'success');
+    toast('Facturación guardada', 'success');
 }
 
 function printBilling() {
@@ -214,19 +326,31 @@ function printBilling() {
     const prices = getEffectivePrices(month);
     const doctorId = getCurrentDoctorId() || 'doc_default';
     const billingKey = 'clinicBilling_' + month + '_' + doctorId;
-    let billingData = {};
-    try { billingData = JSON.parse(localStorage.getItem(billingKey)) || {}; } catch(e) {}
+    const billingData = loadBillingData(billingKey);
 
-    let totalBilled = 0, totalReceived = 0;
+    let totalBilled = 0, totalPaid = 0, totalPending = 0;
     let rows = '';
     CATEGORIES.forEach(cat => {
-        const price = prices[cat] || 0;
-        const billedCount = billingData[cat] || 0;
-        if (billedCount > 0) {
-            const received = billedCount * price;
-            totalBilled += billedCount;
-            totalReceived += received;
-            rows += `<tr><td>${cat}</td><td class="num">${price.toFixed(2)}</td><td class="num">${billedCount}</td><td class="num">${received.toFixed(2)}</td></tr>`;
+        const price  = prices[cat] || 0;
+        const entry  = billingData[cat] || { billed: 0, paid: 0 };
+        const billed = entry.billed || 0;
+        const paid   = entry.paid   || 0;
+        if (billed > 0 || paid > 0) {
+            const billedEur  = billed * price;
+            const paidEur    = paid   * price;
+            const pendingEur = Math.max(0, billed - paid) * price;
+            totalBilled  += billed;
+            totalPaid    += paid;
+            totalPending += pendingEur;
+            rows += `<tr>
+                <td>${cat}</td>
+                <td class="num">${price > 0 ? price.toFixed(2) : '—'}</td>
+                <td class="num">${billed}</td>
+                <td class="num">${billedEur > 0 ? billedEur.toFixed(2) : '—'}</td>
+                <td class="num">${paid}</td>
+                <td class="num">${paidEur > 0 ? paidEur.toFixed(2) : '—'}</td>
+                <td class="num" style="color:${pendingEur > 0 ? '#d97706' : '#22c55e'};">${pendingEur > 0 ? pendingEur.toFixed(2) : '✓'}</td>
+            </tr>`;
         }
     });
 
@@ -268,9 +392,18 @@ function printBilling() {
     html += `</div><div class="inv-meta"><div class="inv-num">${orderNum}</div><div class="inv-date">Emitida: ${today}</div><div class="inv-period">Período: ${monthLabel}</div></div></div>
     <div class="inv-title">Facturación — ${monthLabel}</div>
     <div class="inv-subtitle">Resumen de pacientes facturados por aseguradora.</div>
-    <table><thead><tr><th>Aseguradora</th><th class="num">Precio (€)</th><th class="num">Facturados</th><th class="num">Total (€)</th></tr></thead><tbody>
+    <table><thead><tr>
+        <th>Aseguradora</th><th class="num">Precio</th>
+        <th class="num">Facturados</th><th class="num">Total fact. (€)</th>
+        <th class="num">Cobrados</th><th class="num">Total cob. (€)</th>
+        <th class="num">Pendiente (€)</th>
+    </tr></thead><tbody>
     ${rows}
-    <tr><td>TOTAL</td><td></td><td class="num">${totalBilled}</td><td class="num">${totalReceived.toFixed(2)}</td></tr>
+    <tr><td>TOTAL</td><td></td>
+        <td class="num">${totalBilled}</td><td class="num">—</td>
+        <td class="num">${totalPaid}</td><td class="num">—</td>
+        <td class="num" style="color:${totalPending > 0 ? '#d97706' : '#22c55e'};">${totalPending > 0 ? totalPending.toFixed(2) : '✓ Todo cobrado'}</td>
+    </tr>
     </tbody></table></div></body></html>`;
 
     const win = window.open('', '_blank');
@@ -287,6 +420,8 @@ function generateInvoice() {
     const prices      = getEffectivePrices(month);
     const commissions = getCommissions();
     const info        = getClinicInfo();
+    const doctorId    = getCurrentDoctorId() || 'doc_default';
+    const billingData = loadBillingData('clinicBilling_' + month + '_' + doctorId);
 
     const lines = CATEGORIES
         .filter(cat => (data[cat] || 0) > 0)
@@ -295,7 +430,8 @@ function generateInvoice() {
             const price   = prices[cat] || 0;
             const gross   = count * price;
             const commPct = effectiveCommission(cat, commissions);
-            return { cat, count, price, gross, commPct };
+            const paid    = (billingData[cat] || {}).paid || 0;
+            return { cat, count, price, gross, commPct, paid };
         });
 
     const totalPatients = lines.reduce((s, l) => s + l.count, 0);
@@ -312,8 +448,10 @@ function generateInvoice() {
         : '';
 
     // Serialize data for the inline script
-    const linesJson = JSON.stringify(lines);
-    const irpfPctJson = JSON.stringify(irpfPct);
+    const linesJson    = JSON.stringify(lines);
+    const irpfPctJson  = JSON.stringify(irpfPct);
+    const monthJson    = JSON.stringify(month);
+    const doctorIdJson = JSON.stringify(doctorId);
 
     const headerHtml = `
         <div class="inv-header">
@@ -340,10 +478,10 @@ function generateInvoice() {
             <td class="num">
                 <input class="cobrado-input" id="cobrado-${i}"
                        type="number" min="0" max="${l.count}" step="1"
-                       value="${l.count}"
+                       value="${l.paid}"
                        oninput="recalc()"
                        ${l.count === 0 ? 'disabled' : ''}>
-                <span class="cobrado-print">${l.count}</span>
+                <span class="cobrado-print">${l.paid}</span>
             </td>
             <td class="num">${l.price > 0 ? l.price.toFixed(2) + ' €' : '—'}</td>
             <td class="num gross">${l.gross > 0 ? l.gross.toFixed(2) + ' €' : '—'}</td>
@@ -382,6 +520,7 @@ function generateInvoice() {
         .print-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e293b; padding: 10px; display: flex; justify-content: center; gap: 15px; z-index: 100; }
         .btn { padding: 8px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; }
         .btn-print { background: #6366f1; color: white; }
+        .btn-save  { background: #22c55e; color: white; }
         .btn-close { background: #ef4444; color: white; }
         @media print { .print-bar, .cobrado-input { display: none; } .cobrado-print { display: inline; } .page { box-shadow: none; padding: 0; margin: 0; } body { background: white; padding: 0; } }
         .cobrado-print { display: none; }
@@ -390,6 +529,7 @@ function generateInvoice() {
 <body>
     <div class="print-bar">
         <button class="btn btn-print" onclick="window.print()">🖨️ Imprimir PDF</button>
+        <button class="btn btn-save" onclick="saveCobrados()">💾 Guardar cobros</button>
         <button class="btn btn-close" onclick="window.close()">✕ Cerrar</button>
     </div>
     <div class="page" id="invoice">
@@ -436,8 +576,24 @@ function generateInvoice() {
     </div>
 
     <script>
-        const lines = ${linesJson};
-        const irpfPct = ${irpfPctJson};
+        const lines    = ${linesJson};
+        const irpfPct  = ${irpfPctJson};
+        const month    = ${monthJson};
+        const doctorId = ${doctorIdJson};
+
+        function saveCobrados() {
+            const paidData = {};
+            lines.forEach((l, i) => {
+                paidData[l.cat] = parseInt(document.getElementById('cobrado-' + i).value) || 0;
+            });
+            if (window.opener && !window.opener.closed) {
+                window.opener.savePaidFromInvoice(month, doctorId, paidData);
+                const btn = document.querySelector('.btn-save');
+                if (btn) { btn.textContent = '✓ Guardado'; setTimeout(() => { btn.textContent = '💾 Guardar cobros'; }, 2000); }
+            } else {
+                alert('No se puede comunicar con la ventana principal. Cierra y vuelve a abrir el Payment Order.');
+            }
+        }
 
         function recalc() {
             let tReal = 0, tCob = 0, tGrReal = 0, tGrCob = 0, tRet = 0, tNet = 0;
