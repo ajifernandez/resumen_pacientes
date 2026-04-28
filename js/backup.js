@@ -2,6 +2,16 @@
  * backup.js - Sincronización Google Drive y Backups Locales
  */
 
+function clearLocalStorageKeepDrive() {
+    const token  = localStorage.getItem('clinicGoogleAccessToken');
+    const expiry = localStorage.getItem('clinicGoogleTokenExpiry');
+    const client = localStorage.getItem('clinicGoogleClientId');
+    localStorage.clear();
+    if (token)  localStorage.setItem('clinicGoogleAccessToken', token);
+    if (expiry) localStorage.setItem('clinicGoogleTokenExpiry', expiry);
+    if (client) localStorage.setItem('clinicGoogleClientId', client);
+}
+
 let accessToken = localStorage.getItem('clinicGoogleAccessToken');
 let tokenExpiry = localStorage.getItem('clinicGoogleTokenExpiry');
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -28,7 +38,7 @@ function updateDataTab() {
     if (!el) return;
 
     const doctors = getDoctors();
-    let totalEntries = 0;
+    let totalPacientes = 0;
     const months = new Set();
 
     for (let i = 0; i < localStorage.length; i++) {
@@ -36,8 +46,10 @@ function updateDataTab() {
         if (key && key.startsWith('clinicEntries_')) {
             try {
                 const entries = JSON.parse(localStorage.getItem(key) || '[]');
-                totalEntries += entries.length;
-                entries.forEach(e => { if (e.date) months.add(e.date.substring(0, 7)); });
+                entries.forEach(e => {
+                    totalPacientes += (e.count || 0);
+                    if (e.date) months.add(e.date.substring(0, 7));
+                });
             } catch(e) {}
         }
     }
@@ -55,8 +67,8 @@ function updateDataTab() {
             <div class="label">Médicos</div>
         </div>
         <div class="stat-card">
-            <div class="number">${totalEntries}</div>
-            <div class="label">Registros</div>
+            <div class="number">${totalPacientes}</div>
+            <div class="label">Pacientes totales</div>
         </div>
         <div class="stat-card">
             <div class="number">${months.size}</div>
@@ -117,7 +129,6 @@ function connectGoogleDrive() {
                 
                 updateDriveUI(true);
                 toast('Conectado a Google Drive', 'success');
-                syncToGoogleDrive();
             }
         },
     });
@@ -136,12 +147,14 @@ function disconnectGoogleDrive() {
 }
 
 function updateDriveUI(connected) {
-    const btnConnect = document.getElementById('btn-drive-connect');
-    const btnSync = document.getElementById('btn-drive-sync');
+    const btnConnect    = document.getElementById('btn-drive-connect');
+    const btnSync       = document.getElementById('btn-drive-sync');
+    const btnRestore    = document.getElementById('btn-drive-restore');
     const btnDisconnect = document.getElementById('btn-drive-disconnect');
-    
-    if (btnConnect) btnConnect.style.display = connected ? 'none' : 'block';
-    if (btnSync) btnSync.style.display = connected ? 'block' : 'none';
+
+    if (btnConnect)    btnConnect.style.display    = connected ? 'none'  : 'block';
+    if (btnSync)       btnSync.style.display       = connected ? 'block' : 'none';
+    if (btnRestore)    btnRestore.style.display    = connected ? 'block' : 'none';
     if (btnDisconnect) btnDisconnect.style.display = connected ? 'block' : 'none';
     
     const dot = document.querySelector('#drive-sync-status .status-dot');
@@ -209,6 +222,63 @@ async function syncToGoogleDrive() {
     } catch (err) {
         console.error(err);
         toast('Error de sincronización: ' + err.message, 'error');
+    }
+}
+
+async function restoreFromGoogleDrive() {
+    if (!accessToken || isTokenExpired()) {
+        toast('Sesión expirada. Reconecta Drive.', 'warning');
+        connectGoogleDrive();
+        return;
+    }
+
+    toast('Buscando backups en Drive...', 'info');
+
+    try {
+        const searchRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files?q=name+contains+'clinica_backup_'+and+trashed=false&orderBy=name+desc&fields=files(id,name,modifiedTime)`,
+            { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        );
+        const searchData = await searchRes.json();
+        const files = searchData.files || [];
+
+        if (!files.length) {
+            toast('No se encontraron backups en Drive.', 'warning');
+            return;
+        }
+
+        // El más reciente por nombre (formato clinica_backup_YYYY-MM-DD.json)
+        const latest = files[0];
+        const driveDate = latest.name.replace('clinica_backup_', '').replace('.json', '');
+        const localDate = JSON.parse(exportToJSON(true)).exportDate;
+
+        const msg = `Backup en Drive: ${driveDate}\nDatos locales: ${localDate}\n\n¿Restaurar desde Drive? Se sobrescribirán todos los datos locales.`;
+        if (!confirm(msg)) return;
+
+        toast('Descargando backup...', 'info');
+        const fileRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${latest.id}?alt=media`,
+            { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        );
+        const data = await fileRes.json();
+
+        clearLocalStorageKeepDrive();
+
+        if (data.doctors)     saveDoctors(data.doctors);
+        if (data.clinicInfo)  localStorage.setItem('clinicInfo',  JSON.stringify(data.clinicInfo));
+        if (data.clinicLogo)  localStorage.setItem('clinicLogo',  data.clinicLogo);
+        if (data.allEntries)  Object.keys(data.allEntries).forEach(id => localStorage.setItem(`clinicEntries_${id}`,   JSON.stringify(data.allEntries[id])));
+        if (data.allPrices)   Object.keys(data.allPrices).forEach(id =>  localStorage.setItem(`clinicPrices_${id}`,    JSON.stringify(data.allPrices[id])));
+        if (data.allComms)    Object.keys(data.allComms).forEach(id =>   localStorage.setItem(`clinicCommissions_${id}`,JSON.stringify(data.allComms[id])));
+        if (data.allOverrides)Object.keys(data.allOverrides).forEach(id =>localStorage.setItem(`clinicPriceOverrides_${id}`, JSON.stringify(data.allOverrides[id])));
+        if (data.allBilling)  Object.keys(data.allBilling).forEach(k =>  localStorage.setItem(`clinicBilling_${k}`,    JSON.stringify(data.allBilling[k])));
+
+        toast('Restauración completada. Recargando...', 'success');
+        setTimeout(() => location.reload(), 1500);
+
+    } catch (err) {
+        console.error(err);
+        toast('Error al restaurar: ' + err.message, 'error');
     }
 }
 
@@ -308,8 +378,8 @@ function importJSON() {
                 const data = JSON.parse(f.target.result);
                 if (data.version === 2) {
                     if (!confirm('Este archivo contiene una copia completa de configuración y datos de todos los médicos. ¿Deseas restaurarla? Esto sobrescribirá los datos actuales.')) return;
-                    
-                    localStorage.clear();
+
+                    clearLocalStorageKeepDrive();
                     if (data.doctors) saveDoctors(data.doctors);
                     if (data.clinicInfo) localStorage.setItem('clinicInfo', JSON.stringify(data.clinicInfo));
                     if (data.clinicLogo) localStorage.setItem('clinicLogo', data.clinicLogo);
@@ -355,7 +425,7 @@ function importFromJSON(event) {
             const data = JSON.parse(f.target.result);
             if (data.version === 2) {
                 if (!confirm('Este archivo contiene una copia completa de configuración y datos de todos los médicos. ¿Deseas restaurarla? Esto sobrescribirá los datos actuales.')) return;
-                localStorage.clear();
+                clearLocalStorageKeepDrive();
                 if (data.doctors) saveDoctors(data.doctors);
                 if (data.clinicInfo) localStorage.setItem('clinicInfo', JSON.stringify(data.clinicInfo));
                 if (data.clinicLogo) localStorage.setItem('clinicLogo', data.clinicLogo);
