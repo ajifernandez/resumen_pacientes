@@ -900,6 +900,20 @@ tbody tr:hover { background: var(--primary-light); }
     -moz-appearance: textfield;
 }
 
+.monthly-table td.cell-highlight-row,
+.monthly-table th.cell-highlight-row {
+    background: var(--primary-light) !important;
+}
+.monthly-table td.cell-highlight-col,
+.monthly-table th.cell-highlight-col {
+    background: var(--primary-light) !important;
+}
+.monthly-table td.cell-highlight-row.cell-highlight-col,
+.monthly-table th.cell-highlight-row.cell-highlight-col {
+    background: color-mix(in srgb, var(--primary) 25%, transparent) !important;
+    outline: 1px solid var(--primary);
+}
+
 .monthly-total-col {
     background: var(--success-light) !important;
     font-weight: 700;

@@ -94,6 +94,7 @@ function loadMonthlyData() {
     });
     
     updateMonthlyTotals();
+    initMonthlyTableCrosshair();
     const saveMsg = document.getElementById('saveMonthMsg');
     if (saveMsg) saveMsg.style.display = 'none';
 }
@@ -190,4 +191,31 @@ function saveMonth() {
     saveEntries(entries);
     showInlineMsg('saveMonthMsg', `✓ Guardado — ${totalPatients} pacientes en el mes`);
     toast(`Mes guardado: ${totalPatients} pacientes`, 'success');
+}
+
+function initMonthlyTableCrosshair() {
+    const table = document.querySelector('.monthly-table');
+    if (!table || table._crosshair) return;
+    table._crosshair = true;
+
+    table.addEventListener('mouseover', e => {
+        const cell = e.target.closest('td, th');
+        if (!cell || !cell.closest('.monthly-table')) return;
+
+        const colIdx = cell.cellIndex;
+        const allRows = table.querySelectorAll('thead tr, tbody tr, tfoot tr');
+
+        allRows.forEach(row => {
+            Array.from(row.cells).forEach((c, i) => {
+                c.classList.remove('cell-highlight-row', 'cell-highlight-col');
+                if (c === cell || c.parentElement === cell.parentElement) c.classList.add('cell-highlight-row');
+                if (i === colIdx) c.classList.add('cell-highlight-col');
+            });
+        });
+    });
+
+    table.addEventListener('mouseleave', () => {
+        table.querySelectorAll('.cell-highlight-row, .cell-highlight-col')
+             .forEach(c => c.classList.remove('cell-highlight-row', 'cell-highlight-col'));
+    });
 }
